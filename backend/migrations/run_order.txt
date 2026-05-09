@@ -1,0 +1,14 @@
+# Urutan migrasi (satu nama file per baris). Baris kosong dan # diabaikan.
+# Jalankan setelah schema.sql / CREATE TABLE dasar.
+
+add_booking_amount_to_orders.sql
+add_status_to_custom_requests.sql
+add_surat_jalan_table.sql
+add_piring_nama_pasangan_to_surat_jalan.sql
+add_custom_request_id_to_surat_jalan.sql
+add_images_to_items.sql
+add_vendor_calendar_overrides.sql
+add_maps_link_to_surat_jalan.sql
+add_site_identity_content_section.sql
+add_album_progress_table.sql
+update_site_identity_chekusphoto.sql

@@ -1,0 +1,93 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap');
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: sans-serif;
+  line-height: 1.6;
+  color: #1e293b;
+  scroll-behavior: smooth;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: sans-serif;
+  line-height: 1.2;
+}
+
+.gradient-bg {
+  background: #f0f8ff;
+}
+
+.hero-pattern {
+  /* background-image: radial-gradient(circle at 25px 25px, rgba(198, 230, 241, 0.1) 2px, transparent 0); */
+  background-image: radial-gradient(circle at 25px 25px, rgba(47, 66, 116, 0.1) 2px, transparent 0);
+  background-size: 50px 50px;
+}
+
+.glass-effect {
+  backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.btn-primary {
+  @apply bg-[#2f4274] text-white px-6 py-3 rounded-lg font-medium transition-all duration-300 hover:bg-[#2a3b68] hover:shadow-lg hover:scale-105;
+}
+
+.btn-primary-outline {
+  @apply bg-transparent border-2 border-[#2f4274] text-[#2f4274] px-6 py-3 rounded-lg font-medium transition-all duration-300 hover:bg-[#2f4274] hover:text-white hover:shadow-lg hover:scale-105;
+}
+
+.btn-secondary {
+  @apply bg-gradient-to-r from-secondary-500 to-secondary-600 text-white px-6 py-3 rounded-lg font-medium transition-all duration-300 hover:from-secondary-600 hover:to-secondary-700 hover:shadow-lg hover:scale-105;
+}
+
+.btn-secondary-outline {
+  @apply bg-transparent border-2 border-secondary-500 text-secondary-500 px-6 py-3 rounded-lg font-medium transition-all duration-300 hover:bg-secondary-500 hover:text-white hover:shadow-lg hover:scale-105;
+}
+
+.card-hover {
+  @apply transition-all duration-300 hover:shadow-xl hover:-translate-y-2;
+}
+
+.section-padding {
+  @apply py-16 px-4 sm:px-6 lg:px-8;
+}
+
+.container-custom {
+  @apply max-w-7xl mx-auto;
+}
+
+.text-gradient {
+  color: #2f4274;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+input, textarea {
+  outline: none !important;
+}
