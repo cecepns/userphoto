@@ -31,6 +31,7 @@ import AdminContent from './pages/admin/AdminContent';
 import AdminServiceCards from './pages/admin/AdminServiceCards';
 import AdminServiceFeatures from './pages/admin/AdminServiceFeatures';
 import AdminVendorCalendar from './pages/admin/AdminVendorCalendar';
+import AdminFreelanceCalendar from './pages/admin/AdminFreelanceCalendar';
 import AdminChangePassword from './pages/admin/AdminChangePassword';
 import ProtectedRoute from './components/ProtectedRoute';
 import SiteIdentitySync from './components/SiteIdentitySync';
@@ -118,6 +119,11 @@ function App() {
             <Route path="/admin/vendor-calendar" element={
               <ProtectedRoute>
                 <AdminVendorCalendar />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/freelance-calendar" element={
+              <ProtectedRoute>
+                <AdminFreelanceCalendar />
               </ProtectedRoute>
             } />
             <Route path="/admin/change-password" element={

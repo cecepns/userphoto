@@ -2704,6 +2704,162 @@ app.delete('/api/album-progress/:id', authenticateToken, async (req, res) => {
   }
 });
 
+// Freelance photographer duty calendar (jadwal foto terjun per pesanan)
+function padYmPart(n) {
+  return String(n).padStart(2, '0');
+}
+
+async function validateOrderExistsForFreelance(orderSource, orderId) {
+  const oid = Number(orderId);
+  if (!Number.isFinite(oid) || oid <= 0) return false;
+  if (orderSource === 'order') {
+    const [r] = await db.execute('SELECT id FROM orders WHERE id = ? LIMIT 1', [oid]);
+    return r.length > 0;
+  }
+  if (orderSource === 'custom_request') {
+    const [r] = await db.execute('SELECT id FROM custom_requests WHERE id = ? LIMIT 1', [oid]);
+    return r.length > 0;
+  }
+  return false;
+}
+
+app.get('/api/freelance-calendar', authenticateToken, async (req, res) => {
+  const year = parseInt(req.query.year, 10);
+  const month = parseInt(req.query.month, 10);
+  if (!Number.isFinite(year) || !Number.isFinite(month) || month < 1 || month > 12) {
+    return res.status(400).json({ message: 'Parameter year dan month (1-12) wajib valid' });
+  }
+  const ymdStart = `${year}-${padYmPart(month)}-01`;
+  const lastDom = new Date(year, month, 0).getDate();
+  const ymdEnd = `${year}-${padYmPart(month)}-${padYmPart(lastDom)}`;
+
+  try {
+    const [rows] = await db.execute(
+      `SELECT fa.id, fa.order_source, fa.order_id, fa.photographer_name,
+        DATE_FORMAT(fa.duty_date, '%Y-%m-%d') AS duty_date,
+        fa.notes, fa.created_at, fa.updated_at,
+        CASE WHEN fa.order_source = 'order' THEN o.name ELSE cr.name END AS client_name,
+        CASE WHEN fa.order_source = 'order' THEN o.phone ELSE cr.phone END AS client_phone,
+        CASE WHEN fa.order_source = 'order' THEN o.service_name ELSE cr.services END AS service_label,
+        CASE WHEN fa.order_source = 'order'
+          THEN DATE_FORMAT(o.wedding_date, '%Y-%m-%d')
+          ELSE DATE_FORMAT(cr.wedding_date, '%Y-%m-%d') END AS order_wedding_date
+       FROM freelance_photographer_assignments fa
+       LEFT JOIN orders o ON fa.order_source = 'order' AND fa.order_id = o.id
+       LEFT JOIN custom_requests cr ON fa.order_source = 'custom_request' AND fa.order_id = cr.id
+       WHERE fa.duty_date >= ? AND fa.duty_date <= ?
+       ORDER BY fa.duty_date ASC, fa.id ASC`,
+      [ymdStart, ymdEnd]
+    );
+    res.json({ assignments: rows });
+  } catch (error) {
+    console.error('Freelance calendar list error:', error);
+    res.status(500).json({ message: 'Database error' });
+  }
+});
+
+app.post('/api/freelance-calendar', authenticateToken, async (req, res) => {
+  const { order_source, order_id, photographer_name, duty_date, notes } = req.body || {};
+  const src = order_source === 'custom_request' ? 'custom_request' : order_source === 'order' ? 'order' : null;
+  const oid = Number(order_id);
+  const pname = String(photographer_name || '').trim();
+  const dd = String(duty_date || '').trim().slice(0, 10);
+
+  if (!src) {
+    return res.status(400).json({ message: 'order_source harus order atau custom_request' });
+  }
+  if (!Number.isFinite(oid) || oid <= 0) {
+    return res.status(400).json({ message: 'order_id tidak valid' });
+  }
+  if (!pname) {
+    return res.status(400).json({ message: 'Nama fotografer wajib diisi' });
+  }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dd)) {
+    return res.status(400).json({ message: 'Tanggal bertugas tidak valid (YYYY-MM-DD)' });
+  }
+
+  try {
+    const ok = await validateOrderExistsForFreelance(src, oid);
+    if (!ok) {
+      return res.status(404).json({ message: 'Pesanan tidak ditemukan' });
+    }
+
+    const [result] = await db.execute(
+      `INSERT INTO freelance_photographer_assignments
+        (order_source, order_id, photographer_name, duty_date, notes)
+       VALUES (?, ?, ?, ?, ?)`,
+      [src, oid, pname, dd, notes != null ? String(notes).trim().slice(0, 4000) : null]
+    );
+    res.json({ id: result.insertId, message: 'Jadwal freelance disimpan' });
+  } catch (error) {
+    console.error('Freelance calendar create error:', error);
+    res.status(500).json({ message: 'Database error' });
+  }
+});
+
+app.put('/api/freelance-calendar/:id', authenticateToken, async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isFinite(id) || id <= 0) {
+    return res.status(400).json({ message: 'ID tidak valid' });
+  }
+  const { photographer_name, duty_date, notes } = req.body || {};
+
+  try {
+    const fields = [];
+    const vals = [];
+    if (photographer_name !== undefined) {
+      const p = String(photographer_name || '').trim();
+      if (!p) return res.status(400).json({ message: 'Nama fotografer tidak boleh kosong' });
+      fields.push('photographer_name = ?');
+      vals.push(p);
+    }
+    if (duty_date !== undefined) {
+      const dd = String(duty_date || '').trim().slice(0, 10);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(dd)) {
+        return res.status(400).json({ message: 'Tanggal bertugas tidak valid (YYYY-MM-DD)' });
+      }
+      fields.push('duty_date = ?');
+      vals.push(dd);
+    }
+    if (notes !== undefined) {
+      fields.push('notes = ?');
+      vals.push(notes != null ? String(notes).trim().slice(0, 4000) : null);
+    }
+    if (!fields.length) {
+      return res.status(400).json({ message: 'Tidak ada field yang diubah' });
+    }
+    vals.push(id);
+    const [result] = await db.execute(
+      `UPDATE freelance_photographer_assignments SET ${fields.join(', ')} WHERE id = ?`,
+      vals
+    );
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'Data tidak ditemukan' });
+    }
+    res.json({ message: 'Jadwal freelance diperbarui' });
+  } catch (error) {
+    console.error('Freelance calendar update error:', error);
+    res.status(500).json({ message: 'Database error' });
+  }
+});
+
+app.delete('/api/freelance-calendar/:id', authenticateToken, async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isFinite(id) || id <= 0) {
+    return res.status(400).json({ message: 'ID tidak valid' });
+  }
+  try {
+    const [result] = await db.execute('DELETE FROM freelance_photographer_assignments WHERE id = ?', [id]);
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'Data tidak ditemukan' });
+    }
+    res.json({ message: 'Jadwal freelance dihapus' });
+  } catch (error) {
+    console.error('Freelance calendar delete error:', error);
+    res.status(500).json({ message: 'Database error' });
+  }
+});
+
 // Contact form
 app.post('/api/contact', async (req, res) => {
   const { name, email, phone, address, instagram, consultation_date, message } = req.body;

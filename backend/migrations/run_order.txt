@@ -12,3 +12,4 @@ add_maps_link_to_surat_jalan.sql
 add_site_identity_content_section.sql
 add_album_progress_table.sql
 update_site_identity_chekusphoto.sql
+add_freelance_photographer_assignments.sql

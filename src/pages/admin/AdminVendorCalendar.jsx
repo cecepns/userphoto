@@ -289,14 +289,14 @@ const AdminVendorCalendar = () => {
   return (
     <>
       <Helmet>
-        <title>Kalender Freelance - Dashboard Admin</title>
+        <title>Kalender Vendor (Topping) - Dashboard Admin</title>
       </Helmet>
 
       <AdminLayout>
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">Kalender Freelance</h1>
+          <h1 className="text-3xl font-bold text-gray-800 mb-2">Kalender Vendor</h1>
           <p className="text-gray-600">
-            Jadwal topping vendor otomatis dari pesanan client.
+            Jadwal vendor topping otomatis dari pesanan (halaman legacy; menu disembunyikan).
           </p>
           <p className="text-xs text-gray-500 mt-1">
             Filter aktif: hanya item kategori TOPPING ({Object.keys(toppingVendorsMap).length} vendor aktif).
