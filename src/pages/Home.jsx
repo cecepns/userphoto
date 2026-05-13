@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import AOS from "aos";
 import "aos/dist/aos.css";
 import heroImage from "../assets/hero-banner.jpg";
+import { imageUrl } from "../utils/imageUrl";
 
 const Home = () => {
   const [heroContent, setHeroContent] = useState(null);
@@ -125,7 +126,7 @@ const Home = () => {
             <div className="relative" data-aos="fade-left" data-aos-delay="300">
               <div className="absolute inset-0 bg-gradient-to-r from-primary-200 to-secondary-200 rounded-full blur-3xl opacity-30 animate-float"></div>
               <img
-                src={heroContent && heroContent.image_url ? heroContent.image_url : heroImage}
+                src={heroContent && heroContent.image_url ? imageUrl(heroContent.image_url) : heroImage}
                 alt="Upacara pernikahan yang indah"
                 className="relative z-10 w-full h-96 lg:h-[500px] object-cover rounded-2xl shadow-2xl"
               />

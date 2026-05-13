@@ -204,7 +204,7 @@ const AdminContent = () => {
         {/** section khusus untuk branding global */}
         {/** title: nama app, subtitle: nama perusahaan, button_text: inisial, image_url: logo */}
         <div className="mb-8">
-          <div className="flex justify-between items-center">
+          <div className="flex flex-wrap justify-between items-center">
             <div>
               <h1 className="text-3xl font-bold text-gray-800 mb-2">Kelola Konten</h1>
               <p className="text-gray-600">Kelola konten dinamis untuk website Anda. Edit section <strong>site_identity</strong> untuk ubah nama aplikasi, nama perusahaan, inisial logo, dan logo utama (isi di field URL Gambar).</p>
