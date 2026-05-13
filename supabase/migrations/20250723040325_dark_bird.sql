@@ -100,9 +100,9 @@ CREATE TABLE IF NOT EXISTS contact_messages (
 
 -- Sample services
 INSERT IGNORE INTO services (id, name, description, base_price, image) VALUES 
-(1, 'Complete Wedding Package', 'Full wedding planning service including venue, decoration, catering, and coordination', 25000, 'https://images.pexels.com/photos/1444442/pexels-photo-1444442.jpeg?auto=compress&cs=tinysrgb&w=800'),
-(2, 'Intimate Wedding Package', 'Perfect for small gatherings with personalized touches and elegant decoration', 12000, 'https://images.pexels.com/photos/1024993/pexels-photo-1024993.jpeg?auto=compress&cs=tinysrgb&w=800'),
-(3, 'Luxury Wedding Package', 'Premium service with exclusive venues, high-end decoration, and professional coordination', 50000, 'https://images.pexels.com/photos/1616113/pexels-photo-1616113.jpeg?auto=compress&cs=tinysrgb&w=800');
+(1, 'Complete Dokumentasi Wedding', 'Full wedding planning service including venue, decoration, catering, and coordination', 25000, 'https://images.pexels.com/photos/1444442/pexels-photo-1444442.jpeg?auto=compress&cs=tinysrgb&w=800'),
+(2, 'Intimate Dokumentasi Wedding', 'Perfect for small gatherings with personalized touches and elegant decoration', 12000, 'https://images.pexels.com/photos/1024993/pexels-photo-1024993.jpeg?auto=compress&cs=tinysrgb&w=800'),
+(3, 'Luxury Dokumentasi Wedding', 'Premium service with exclusive venues, high-end decoration, and professional coordination', 50000, 'https://images.pexels.com/photos/1616113/pexels-photo-1616113.jpeg?auto=compress&cs=tinysrgb&w=800');
 
 -- Sample service items
 INSERT IGNORE INTO service_items (service_id, name, description, price) VALUES 

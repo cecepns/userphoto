@@ -20,7 +20,7 @@ const Navbar = () => {
 
   const navItems = [
     { name: 'Beranda', path: '/' },
-    { name: 'Wedding Package', path: '/services' },
+    { name: 'Dokumentasi Wedding', path: '/services' },
     { name: 'Custom Service', path: '/custom-service' },
     { name: 'Pesanan Saya', path: '/pesanan-saya' },
     { name: 'Galeri', path: '/gallery' },

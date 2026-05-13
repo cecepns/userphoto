@@ -223,7 +223,7 @@ const Home = () => {
               ))
             ) : (
               <>
-                {/* Fallback Wedding Package Card */}
+                {/* Fallback Dokumentasi Wedding Card */}
                 <div
                   className="bg-white rounded-2xl shadow-lg overflow-hidden card-hover border border-gray-100"
                   data-aos="fade-up"
@@ -232,7 +232,7 @@ const Home = () => {
                   <div className="p-8 text-center">
                     <div className="text-6xl mb-6">💒</div>
                     <h3 className="text-2xl font-semibold text-gray-800 mb-4">
-                      Wedding Package
+                      Dokumentasi Wedding
                     </h3>
                     <p className="text-gray-600 mb-6">
                       Pilih dari berbagai paket pernikahan yang sudah kami siapkan

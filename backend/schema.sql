@@ -220,8 +220,8 @@ CREATE TABLE IF NOT EXISTS gallery_images (
 -- Sample content sections
 INSERT IGNORE INTO content_sections (id, section_name, title, subtitle, description, image_url, button_text, button_url, sort_order) VALUES 
 (1, 'hero_section', 'Hari', 'Pernikahan', 'Buatlah Kesan Indah di Moment Pernikahanmu, dan Abadikan Setiap Moment di Hari Bahagia Mu, Libatkan Kami Untuk Mengatur Acara Bahagiamu.', 'https://images.pexels.com/photos/1444442/pexels-photo-1444442.jpeg?auto=compress&cs=tinysrgb&w=800', 'Konsultasi Gratis', '/contact', 1),
-(2, 'services_preview_section', 'Pilihan Layanan Pernikahan', 'WEDDING PACKAGE | DEKORASI | MUA | DOKUMENTASI | STUDIO | ENTERTAINMENT | SOUNDSYSTEM | MC | RPOSESI ADAT | CREW WO', '', '', '', '', 2),
-(3, 'services_hero_section', 'Wedding Package', '', 'Dari upacara intim hingga perayaan megah, kami menawarkan paket pernikahan komprehensif yang disesuaikan untuk membuat hari spesial Anda sempurna.', '', 'Konsultasi Gratis', '/contact', 3),
+(2, 'services_preview_section', 'Pilihan Layanan Pernikahan', 'Dokumentasi Wedding | DEKORASI | MUA | DOKUMENTASI | STUDIO | ENTERTAINMENT | SOUNDSYSTEM | MC | RPOSESI ADAT | CREW WO', '', '', '', '', 2),
+(3, 'services_hero_section', 'Dokumentasi Wedding', '', 'Dari upacara intim hingga perayaan megah, kami menawarkan paket pernikahan komprehensif yang disesuaikan untuk membuat hari spesial Anda sempurna.', '', 'Konsultasi Gratis', '/contact', 3),
 (4, 'custom_service_section', 'Layanan Pernikahan Kustom', 'Buat Sesuai Kebutuhan Anda', 'Buat layanan pernikahan yang sesuai dengan kebutuhan dan budget Anda. Pilih layanan yang Anda inginkan dan kami akan menyesuaikan dengan preferensi Anda untuk menciptakan pernikahan impian yang sempurna.', '', 'Mulai Sekarang', '/custom-service', 4),
 (5, 'gallery_hero_section', 'Galeri Pernikahan', '', 'Jelajahi koleksi pernikahan indah kami dan dapatkan inspirasi untuk hari spesial Anda.', '', 'Lihat Galeri', '/gallery', 5),
 (6, 'about_hero_section', 'Tentang User Wedding', '', 'Kami bersemangat menciptakan momen magis dan mewujudkan impian pernikahan Anda menjadi kenyataan. Dengan pengalaman bertahun-tahun dan perhatian pada detail, kami memastikan hari spesial Anda sempurna.', 'https://images.pexels.com/photos/1444442/pexels-photo-1444442.jpeg?auto=compress&cs=tinysrgb&w=800', '', '', 6),
@@ -240,7 +240,7 @@ INSERT IGNORE INTO service_features (id, title, description, icon, sort_order) V
 
 -- Sample service cards (service type)
 INSERT IGNORE INTO service_cards (id, title, description, icon, button_text, button_url, card_type, sort_order) VALUES 
-(1, 'Wedding Package', 'Pilih dari berbagai paket pernikahan yang sudah kami siapkan dengan harga terjangkau dan layanan lengkap', '💒', 'Lihat Paket →', '/services', 'service', 1),
+(1, 'Dokumentasi Wedding', 'Pilih dari berbagai paket pernikahan yang sudah kami siapkan dengan harga terjangkau dan layanan lengkap', '💒', 'Lihat Paket →', '/services', 'service', 1),
 (2, 'Custom Service', 'Buat layanan pernikahan sesuai dengan visi dan kebutuhan unik Anda dengan konsultasi langsung', '✨', 'Buat Custom →', '/custom-service', 'service', 2);
 
 -- Sample about cards (about type)
@@ -266,9 +266,9 @@ INSERT IGNORE INTO items (id, name, description, price, category) VALUES
 
 -- Sample services
 INSERT IGNORE INTO services (id, name, description, base_price, image) VALUES 
-(1, 'Complete Wedding Package', 'Full wedding planning service including venue, decoration, catering, and coordination', 25000, 'https://images.pexels.com/photos/1444442/pexels-photo-1444442.jpeg?auto=compress&cs=tinysrgb&w=800'),
-(2, 'Intimate Wedding Package', 'Perfect for small gatherings with personalized touches and elegant decoration', 12000, 'https://images.pexels.com/photos/1024993/pexels-photo-1024993.jpeg?auto=compress&cs=tinysrgb&w=800'),
-(3, 'Luxury Wedding Package', 'Premium service with exclusive venues, high-end decoration, and professional coordination', 50000, 'https://images.pexels.com/photos/1616113/pexels-photo-1616113.jpeg?auto=compress&cs=tinysrgb&w=800');
+(1, 'Complete Dokumentasi Wedding', 'Full wedding planning service including venue, decoration, catering, and coordination', 25000, 'https://images.pexels.com/photos/1444442/pexels-photo-1444442.jpeg?auto=compress&cs=tinysrgb&w=800'),
+(2, 'Intimate Dokumentasi Wedding', 'Perfect for small gatherings with personalized touches and elegant decoration', 12000, 'https://images.pexels.com/photos/1024993/pexels-photo-1024993.jpeg?auto=compress&cs=tinysrgb&w=800'),
+(3, 'Luxury Dokumentasi Wedding', 'Premium service with exclusive venues, high-end decoration, and professional coordination', 50000, 'https://images.pexels.com/photos/1616113/pexels-photo-1616113.jpeg?auto=compress&cs=tinysrgb&w=800');
 
 -- Sample service-item relationships
 INSERT IGNORE INTO service_items (service_id, item_id, custom_price, is_required, sort_order) VALUES 

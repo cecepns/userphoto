@@ -271,7 +271,7 @@ const AdminServiceCards = () => {
                         value={formData.title}
                         onChange={(e) => setFormData({...formData, title: e.target.value})}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                        placeholder="Wedding Package"
+                        placeholder="Dokumentasi Wedding"
                         required
                       />
                     </div>
