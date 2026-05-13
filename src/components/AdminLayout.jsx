@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import PropTypes from 'prop-types';
 import { useSiteIdentity } from '../hooks/useSiteIdentity';
+import { imageUrl } from '../utils/imageUrl';
 
 const AdminLayout = ({ children }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -50,7 +51,7 @@ const AdminLayout = ({ children }) => {
         <div className="flex items-center justify-center h-20 px-4 bg-gradient-to-r from-primary-600 to-secondary-600 flex-shrink-0">
           <Link to="/" className="flex items-center space-x-3">
             {logoUrl ? (
-              <img src={logoUrl} alt={appName} className="w-10 h-10 rounded-full object-cover bg-white" />
+              <img src={imageUrl(logoUrl)} alt={appName} className="w-10 h-10 rounded-full object-cover bg-white" />
             ) : (
               <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center">
                 <span className="text-primary-600 font-bold">{appInitial}</span>
