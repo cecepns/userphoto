@@ -40,7 +40,7 @@ const Navbar = () => {
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-3">
             <img
-              src={logoUrl ? imageUrl(logoUrl) : "https://placehold.co/50x50"}
+              src={logoUrl ? imageUrl(logoUrl) : "https://placehold.co/35x35"}
               alt={appName}
               className="w-24 h-auto"
             />
