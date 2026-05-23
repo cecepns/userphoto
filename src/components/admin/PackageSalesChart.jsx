@@ -70,6 +70,14 @@ const PackageSalesChart = ({ data = [] }) => {
   const activeView = CHART_VIEWS[view];
   const chartHeight = Math.max(280, chartData.length * 52 + 40);
 
+  const yAxisWidth = useMemo(() => {
+    const longest = chartData.reduce(
+      (max, d) => Math.max(max, String(d.short_name || '').length),
+      4,
+    );
+    return Math.min(160, Math.max(44, longest * 7 + 12));
+  }, [chartData]);
+
   const formatXAxis = (value) => {
     if (view === 'revenue') {
       if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}jt`;
@@ -97,11 +105,11 @@ const PackageSalesChart = ({ data = [] }) => {
         ))}
       </div>
 
-      <ResponsiveContainer width="100%" height={chartHeight}>
+      <ResponsiveContainer width="100%" height={chartHeight} className="-ml-1">
         <BarChart
           data={chartData}
           layout="vertical"
-          margin={{ top: 4, right: 16, left: 8, bottom: 4 }}
+          margin={{ top: 4, right: 12, left: 0, bottom: 4 }}
           barCategoryGap="20%"
         >
           <defs>
@@ -121,8 +129,9 @@ const PackageSalesChart = ({ data = [] }) => {
           <YAxis
             type="category"
             dataKey="short_name"
-            width={130}
+            width={yAxisWidth}
             tick={{ fill: '#374151', fontSize: 12 }}
+            tickMargin={4}
             axisLine={false}
             tickLine={false}
           />
