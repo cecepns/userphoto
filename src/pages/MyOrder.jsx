@@ -4,8 +4,9 @@ import { Helmet } from "react-helmet-async";
 import toast from "react-hot-toast";
 import { formatRupiah } from "../utils/formatters";
 import { imageUrl } from "../utils/imageUrl";
+import { formatPhotoStatus, formatVideoStatus } from "../constants/orderProgress";
 
-const API_BASE = "https://api-inventory.isavralabel.com/chekusphoto/api";
+const API_BASE = "https://api.kingcreativestudio.my.id/chekusphoto/api";
 
 const toNumber = (value) => {
   const n = typeof value === "number" ? value : parseFloat(value);
@@ -40,6 +41,7 @@ const MyOrder = () => {
   const [order, setOrder] = useState(null);
   const [orderSource, setOrderSource] = useState("order");
   const [albumProgress, setAlbumProgress] = useState(null);
+  const [orderProgress, setOrderProgress] = useState(null);
   const [loading, setLoading] = useState(false);
 
   const parseInvoiceInput = (value) => {
@@ -65,6 +67,7 @@ const MyOrder = () => {
 
     setLoading(true);
     setAlbumProgress(null);
+    setOrderProgress(null);
     try {
       const tryFetchOrder = async () => {
         const response = await fetch(
@@ -112,9 +115,18 @@ const MyOrder = () => {
       } else {
         setAlbumProgress(null);
       }
+
+      const orderProgRes = await fetch(
+        `${API_BASE}/order-progress/public/${apiSource}/${lookupResult.data.id}?phone=${encodeURIComponent(phone)}`
+      );
+      const orderProgJson = await orderProgRes.json().catch(() => ({}));
+      if (orderProgRes.ok) {
+        setOrderProgress(orderProgJson.progress || null);
+      }
     } catch (error) {
       setOrder(null);
       setAlbumProgress(null);
+      setOrderProgress(null);
       toast.error(error.message || "Gagal memuat pesanan");
     } finally {
       setLoading(false);
@@ -279,6 +291,52 @@ const MyOrder = () => {
                       <p className="text-sm text-gray-500">
                         Belum ada informasi progress album untuk pesanan ini. Hubungi tim kami bila
                         dibutuhkan.
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="bg-white rounded-2xl border border-[#d7e3ff] shadow-lg p-4 md:p-6">
+                    <h2 className="text-lg font-semibold text-[#2f4274] mb-3">
+                      Progress pesanan (Foto & Video)
+                    </h2>
+                    {orderProgress ? (
+                      <dl className="space-y-2 text-sm">
+                        <div className="flex justify-between gap-4">
+                          <dt className="text-gray-600">Progres foto</dt>
+                          <dd className="font-semibold text-gray-900">
+                            {formatPhotoStatus(orderProgress.photo_status)}
+                          </dd>
+                        </div>
+                        <div className="flex justify-between gap-4">
+                          <dt className="text-gray-600">Progres video</dt>
+                          <dd className="font-semibold text-gray-900">
+                            {formatVideoStatus(orderProgress.video_status)}
+                          </dd>
+                        </div>
+                        {orderProgress.photo_link && (
+                          <div>
+                            <dt className="text-gray-600 mb-1">Link foto</dt>
+                            <dd>
+                              <a href={orderProgress.photo_link} target="_blank" rel="noreferrer" className="text-primary-600 break-all hover:underline">
+                                {orderProgress.photo_link}
+                              </a>
+                            </dd>
+                          </div>
+                        )}
+                        {orderProgress.video_link && (
+                          <div>
+                            <dt className="text-gray-600 mb-1">Link video</dt>
+                            <dd>
+                              <a href={orderProgress.video_link} target="_blank" rel="noreferrer" className="text-primary-600 break-all hover:underline">
+                                {orderProgress.video_link}
+                              </a>
+                            </dd>
+                          </div>
+                        )}
+                      </dl>
+                    ) : (
+                      <p className="text-sm text-gray-500">
+                        Belum ada update progress foto/video. Tim kami akan memperbarui status ini.
                       </p>
                     )}
                   </div>

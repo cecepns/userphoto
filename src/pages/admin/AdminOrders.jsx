@@ -7,7 +7,7 @@ import { formatRupiah, formatDate, formatDateTime } from "../../utils/formatters
 import jsPDF from "jspdf";
 import { useSiteIdentity } from "../../hooks/useSiteIdentity";
 
-const API_BASE = "https://api-inventory.isavralabel.com/chekusphoto/api";
+const API_BASE = "https://api.kingcreativestudio.my.id/chekusphoto/api";
 const CLIENT_COLOR_POOL = [
   "bg-green-600 text-white",
   "bg-sky-600 text-white",
@@ -954,6 +954,17 @@ const AdminOrders = () => {
     doc.text(`Nomor Rekening: ${bankAccountNumber}`, 20, currentY + 75);
     doc.text(`Atas Nama: ${bankAccountName}`, 20, currentY + 82);
 
+    const isFullyPaid =
+      invoiceTotal > 0 && toNumber(item.booking_amount || 0) >= invoiceTotal;
+    if (isFullyPaid) {
+      doc.setFontSize(36);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(220, 38, 38);
+      doc.text("LUNAS", pageWidth - 45, 88, { align: "center", angle: -18 });
+      doc.setTextColor(0, 0, 0);
+      doc.setFont("helvetica", "normal");
+    }
+
     // Add user notes section if available
     let notesY = currentY + 95;
     const notesText = item.notes || item.additional_requests || "";
@@ -1473,6 +1484,20 @@ const AdminOrders = () => {
                         </span>
                         <p className="text-gray-900">{selectedOrder.phone}</p>
                       </div>
+                      {(selectedOrder.bride_name || selectedOrder.groom_name) && (
+                        <div>
+                          <span className="font-medium text-gray-700">Pasangan:</span>
+                          <p className="text-gray-900">
+                            {selectedOrder.bride_name || "-"} & {selectedOrder.groom_name || "-"}
+                          </p>
+                        </div>
+                      )}
+                      {selectedOrder.reference_source && (
+                        <div>
+                          <span className="font-medium text-gray-700">Referensi:</span>
+                          <p className="text-gray-900 capitalize">{selectedOrder.reference_source}</p>
+                        </div>
+                      )}
                       <div>
                         <span className="font-medium text-gray-700">
                           {selectedOrder.orderType === "custom_request" ? "Permintaan tambahan:" : "Alamat:"}

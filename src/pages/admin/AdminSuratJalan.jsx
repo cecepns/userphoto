@@ -22,7 +22,7 @@ import { formatDate, toLocalDate, toDateOnlyString } from "../../utils/formatter
 import jsPDF from "jspdf";
 import QRCode from "qrcode";
 
-const API_BASE = "https://api-inventory.isavralabel.com/chekusphoto";
+const API_BASE = "https://api.kingcreativestudio.my.id/chekusphoto";
 function imageUrl(value) {
   if (!value) return "";
   if (value.startsWith("http")) return value;

@@ -3,7 +3,7 @@ import { Helmet } from "react-helmet-async";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import AdminLayout from "../../components/AdminLayout";
 
-const API_BASE = "https://api-inventory.isavralabel.com/chekusphoto/api";
+const API_BASE = "https://api.kingcreativestudio.my.id/chekusphoto/api";
 
 const VENDOR_COLOR_POOL = [
   "bg-green-600 text-white",
@@ -50,6 +50,10 @@ const AdminVendorCalendar = () => {
   const [selectedEventDetail, setSelectedEventDetail] = useState(null);
   const [vendorInputName, setVendorInputName] = useState("");
   const [savingVendorName, setSavingVendorName] = useState(false);
+  const [adminVendors, setAdminVendors] = useState([]);
+  const [vendorFilter, setVendorFilter] = useState("all");
+  const [assignedVendorId, setAssignedVendorId] = useState("");
+  const [savingAssignedVendor, setSavingAssignedVendor] = useState(false);
 
   const getVendorColorClass = (vendorKey, vendorName = "") => {
     const vendorNameNormalized = normalizeText(vendorName);
@@ -136,6 +140,7 @@ const AdminVendorCalendar = () => {
 
       setToppingVendorsMap(toppingMap);
       setEvents(filteredEvents);
+      setAdminVendors(Array.isArray(calendarData?.admin_vendors) ? calendarData.admin_vendors : []);
     } catch (error) {
       console.error("Error fetching vendor calendar:", error);
       setToppingVendorsMap({});
@@ -155,9 +160,11 @@ const AdminVendorCalendar = () => {
     return events.filter((event) => {
       const d = new Date(event.wedding_date);
       if (isNaN(d.getTime())) return false;
-      return d.getFullYear() === year && d.getMonth() === month;
+      if (d.getFullYear() !== year || d.getMonth() !== month) return false;
+      if (vendorFilter === "all") return true;
+      return String(event.vendor_id || "") === String(vendorFilter);
     });
-  }, [events, calendarMonth]);
+  }, [events, calendarMonth, vendorFilter]);
 
   const eventsByDate = useMemo(() => {
     return monthlyEvents.reduce((acc, event) => {
@@ -226,7 +233,36 @@ const AdminVendorCalendar = () => {
 
   const handleOpenEventDetail = (event) => {
     setSelectedEventDetail(event);
-    setVendorInputName("");
+    setVendorInputName(event.custom_vendor_name || "");
+    setAssignedVendorId(event.vendor_id ? String(event.vendor_id) : "");
+  };
+
+  const handleSaveAssignedVendor = async () => {
+    if (!selectedEventDetail) return;
+    setSavingAssignedVendor(true);
+    try {
+      const path =
+        selectedEventDetail.event_type === "custom_request"
+          ? `${API_BASE}/custom-requests/${selectedEventDetail.source_id}/vendor`
+          : `${API_BASE}/orders/${selectedEventDetail.source_id}/vendor`;
+      const response = await fetch(path, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("admin_token")}`,
+        },
+        body: JSON.stringify({
+          vendor_id: assignedVendorId ? Number(assignedVendorId) : null,
+        }),
+      });
+      if (!response.ok) throw new Error("Gagal menyimpan vendor");
+      await fetchVendorCalendar();
+      setSelectedEventDetail(null);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setSavingAssignedVendor(false);
+    }
   };
 
   const handleApplyVendorName = () => {
@@ -296,7 +332,7 @@ const AdminVendorCalendar = () => {
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-800 mb-2">Kalender Vendor</h1>
           <p className="text-gray-600">
-            Jadwal vendor topping otomatis dari pesanan (halaman legacy; menu disembunyikan).
+            Filter semua client atau per vendor. Kelola daftar vendor di menu Daftar Vendor.
           </p>
           <p className="text-xs text-gray-500 mt-1">
             Filter aktif: hanya item kategori TOPPING ({Object.keys(toppingVendorsMap).length} vendor aktif).
@@ -304,6 +340,19 @@ const AdminVendorCalendar = () => {
         </div>
 
         <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+          <div className="mb-4 flex flex-col sm:flex-row sm:items-center gap-3">
+            <label className="text-sm text-gray-600">Filter vendor:</label>
+            <select
+              value={vendorFilter}
+              onChange={(e) => setVendorFilter(e.target.value)}
+              className="border rounded-lg px-3 py-2 text-sm max-w-xs"
+            >
+              <option value="all">Semua Client</option>
+              {adminVendors.map((v) => (
+                <option key={v.id} value={String(v.id)}>{v.name}</option>
+              ))}
+            </select>
+          </div>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-gray-800">Jadwal Vendor</h2>
             <div className="flex items-center gap-2">
@@ -552,6 +601,34 @@ const AdminVendorCalendar = () => {
                   <div>
                     <p className="text-gray-500">Status</p>
                     <p className="font-medium text-gray-900">{statusLabel[selectedEventDetail.status] || selectedEventDetail.status}</p>
+                  </div>
+                  <div className="md:col-span-2">
+                    <p className="text-gray-500">Vendor Penugasan (dari daftar admin)</p>
+                    <div className="mt-1 flex gap-2">
+                      <select
+                        value={assignedVendorId}
+                        onChange={(e) => setAssignedVendorId(e.target.value)}
+                        className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                      >
+                        <option value="">— Belum dipilih —</option>
+                        {adminVendors.map((v) => (
+                          <option key={v.id} value={String(v.id)}>{v.name}</option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        onClick={handleSaveAssignedVendor}
+                        disabled={savingAssignedVendor}
+                        className="rounded-lg bg-secondary-600 px-3 py-2 text-sm font-medium text-white hover:bg-secondary-700 disabled:opacity-60"
+                      >
+                        {savingAssignedVendor ? "..." : "Simpan"}
+                      </button>
+                    </div>
+                    {selectedEventDetail.assigned_vendor_name && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        Saat ini: {selectedEventDetail.assigned_vendor_name}
+                      </p>
+                    )}
                   </div>
                 </div>
                 <div>

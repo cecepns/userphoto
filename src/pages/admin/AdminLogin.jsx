@@ -28,7 +28,7 @@ const AdminLogin = () => {
     setError('');
 
     try {
-      const response = await fetch('https://api-inventory.isavralabel.com/chekusphoto/api/admin/login', {
+      const response = await fetch('https://api.kingcreativestudio.my.id/chekusphoto/api/admin/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

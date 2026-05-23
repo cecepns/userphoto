@@ -13,3 +13,4 @@ add_site_identity_content_section.sql
 add_album_progress_table.sql
 update_site_identity_chekusphoto.sql
 add_freelance_photographer_assignments.sql
+add_client_features_bundle.sql

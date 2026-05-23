@@ -59,17 +59,17 @@ const ServiceDetail = () => {
   const fetchServiceData = async () => {
     try {
       // Fetch service details
-      const serviceResponse = await fetch(`https://api-inventory.isavralabel.com/chekusphoto/api/services/${id}`);
+      const serviceResponse = await fetch(`https://api.kingcreativestudio.my.id/chekusphoto/api/services/${id}`);
       const serviceData = await serviceResponse.json();
       setService(serviceData);
 
       // Fetch service items
-      const itemsResponse = await fetch(`https://api-inventory.isavralabel.com/chekusphoto/api/services/${id}/items`);
+      const itemsResponse = await fetch(`https://api.kingcreativestudio.my.id/chekusphoto/api/services/${id}/items`);
       const itemsData = await itemsResponse.json();
       setItems(itemsData);
 
       // Fetch service features
-      const featuresResponse = await fetch(`https://api-inventory.isavralabel.com/chekusphoto/api/service-features`);
+      const featuresResponse = await fetch(`https://api.kingcreativestudio.my.id/chekusphoto/api/service-features`);
       const featuresData = await featuresResponse.json();
       setFeatures(featuresData);
       // Don't auto-select items - start with empty selection
@@ -82,7 +82,7 @@ const ServiceDetail = () => {
 
   const fetchButtonContent = async () => {
     try {
-      const response = await fetch('https://api-inventory.isavralabel.com/chekusphoto/api/content-sections/button_item_detail');
+      const response = await fetch('https://api.kingcreativestudio.my.id/chekusphoto/api/content-sections/button_item_detail');
       if (response.ok) {
         const data = await response.json();
         setButtonContent(data);
@@ -588,6 +588,9 @@ const BookingModal = ({ service, selectedItems, onClose, onOrderSuccess }) => {
     phone: '',
     address: '',
     wedding_date: '',
+    bride_name: '',
+    groom_name: '',
+    reference_source: '',
     booking_amount: MIN_BOOKING_AMOUNT,
     notes: ''
   });
@@ -618,7 +621,7 @@ const BookingModal = ({ service, selectedItems, onClose, onOrderSuccess }) => {
         booking_amount: parseFloat(formData.booking_amount)
       };
       
-      const response = await fetch('https://api-inventory.isavralabel.com/chekusphoto/api/orders', {
+      const response = await fetch('https://api.kingcreativestudio.my.id/chekusphoto/api/orders', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -726,6 +729,50 @@ const BookingModal = ({ service, selectedItems, onClose, onOrderSuccess }) => {
                       required
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                     />
+                  </div>
+
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Nama Pasangan (Wanita)</label>
+                      <input
+                        type="text"
+                        name="bride_name"
+                        value={formData.bride_name}
+                        onChange={handleInputChange}
+                        required
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Nama Pasangan (Pria)</label>
+                      <input
+                        type="text"
+                        name="groom_name"
+                        value={formData.groom_name}
+                        onChange={handleInputChange}
+                        required
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Dari mana Anda tahu tentang kami?</label>
+                    <select
+                      name="reference_source"
+                      value={formData.reference_source}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    >
+                      <option value="">Pilih referensi</option>
+                      <option value="instagram">Instagram</option>
+                      <option value="tiktok">TikTok</option>
+                      <option value="facebook">Facebook</option>
+                      <option value="google">Google / Pencarian</option>
+                      <option value="teman">Teman / Kerabat</option>
+                      <option value="lainnya">Lainnya</option>
+                    </select>
                   </div>
 
                   <div>

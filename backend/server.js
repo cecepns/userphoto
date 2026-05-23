@@ -142,6 +142,7 @@ async function initializeDatabase() {
 
     await runMigrations(db);
 
+
     console.log('Database initialized successfully');
   } catch (error) {
     console.error('Database initialization error:', error);
@@ -166,6 +167,21 @@ const authenticateToken = (req, res, next) => {
     next();
   });
 };
+
+const PHOTO_STATUSES = new Set([
+  'photo_progress', 'editing', 'draft_album', 'printing', 'shipping', 'completed'
+]);
+const VIDEO_STATUSES = new Set([
+  'video_progress', 'processing', 'revision', 'completed'
+]);
+const REFERENCE_SOURCES = new Set([
+  'instagram', 'tiktok', 'facebook', 'google', 'teman', 'lainnya'
+]);
+
+function parseOrderSource(value) {
+  const v = String(value || '').trim();
+  return v === 'custom_request' ? 'custom_request' : 'order';
+}
 
 // Routes
 
@@ -1022,19 +1038,27 @@ app.get('/api/vendor-calendar', authenticateToken, async (req, res) => {
     );
 
     const [orders] = await db.execute(
-      `SELECT id, name, phone, email, DATE_FORMAT(wedding_date, '%Y-%m-%d') AS wedding_date, status, selected_items
-       FROM orders
-       WHERE wedding_date IS NOT NULL
-         AND status IN ('pending', 'confirmed', 'completed')
-       ORDER BY wedding_date ASC`
+      `SELECT o.id, o.name, o.phone, o.email, DATE_FORMAT(o.wedding_date, '%Y-%m-%d') AS wedding_date,
+              o.status, o.selected_items, o.vendor_id, v.name AS assigned_vendor_name
+       FROM orders o
+       LEFT JOIN vendors v ON o.vendor_id = v.id
+       WHERE o.wedding_date IS NOT NULL
+         AND o.status IN ('pending', 'confirmed', 'completed')
+       ORDER BY o.wedding_date ASC`
     );
 
     const [customRequests] = await db.execute(
-      `SELECT id, name, phone, email, DATE_FORMAT(wedding_date, '%Y-%m-%d') AS wedding_date, status, services
-       FROM custom_requests
-       WHERE wedding_date IS NOT NULL
-         AND status IN ('pending', 'confirmed', 'completed')
-       ORDER BY wedding_date ASC`
+      `SELECT cr.id, cr.name, cr.phone, cr.email, DATE_FORMAT(cr.wedding_date, '%Y-%m-%d') AS wedding_date,
+              cr.status, cr.services, cr.vendor_id, v.name AS assigned_vendor_name
+       FROM custom_requests cr
+       LEFT JOIN vendors v ON cr.vendor_id = v.id
+       WHERE cr.wedding_date IS NOT NULL
+         AND cr.status IN ('pending', 'confirmed', 'completed')
+       ORDER BY cr.wedding_date ASC`
+    );
+
+    const [adminVendors] = await db.execute(
+      'SELECT id, name FROM vendors WHERE is_active = 1 ORDER BY name ASC'
     );
 
     const events = [];
@@ -1070,7 +1094,9 @@ app.get('/api/vendor-calendar', authenticateToken, async (req, res) => {
           status: order.status,
           vendor_key: `item_${matchedTopping.id}`,
           vendor_name: matchedTopping.name,
-          source_item_name: selectedItemName || matchedTopping.name
+          source_item_name: selectedItemName || matchedTopping.name,
+          vendor_id: order.vendor_id || null,
+          assigned_vendor_name: order.assigned_vendor_name || ''
         });
       }
     }
@@ -1096,7 +1122,9 @@ app.get('/api/vendor-calendar', authenticateToken, async (req, res) => {
           status: request.status,
           vendor_key: `item_${matchedTopping.id}`,
           vendor_name: matchedTopping.name,
-          source_item_name: chunk
+          source_item_name: chunk,
+          vendor_id: request.vendor_id || null,
+          assigned_vendor_name: request.assigned_vendor_name || ''
         });
       }
     }
@@ -1147,6 +1175,7 @@ app.get('/api/vendor-calendar', authenticateToken, async (req, res) => {
 
     res.json({
       vendors: toppingItems.map((item) => ({ key: `item_${item.id}`, label: item.name })),
+      admin_vendors: adminVendors,
       events: uniqueEvents
     });
   } catch (error) {
@@ -1204,12 +1233,28 @@ app.put('/api/vendor-calendar/vendor-name', authenticateToken, async (req, res) 
 });
 
 app.post('/api/orders', async (req, res) => {
-  const { name, email, phone, address, wedding_date, notes, service_id, service_name, selected_items, total_amount, booking_amount } = req.body;
-  
+  const {
+    name, email, phone, address, wedding_date, notes, service_id, service_name,
+    selected_items, total_amount, booking_amount,
+    bride_name, groom_name, reference_source
+  } = req.body;
+
+  if (!bride_name?.trim() || !groom_name?.trim()) {
+    return res.status(400).json({ message: 'Nama pasangan wanita dan pria wajib diisi' });
+  }
+
   try {
     const [result] = await db.execute(
-      'INSERT INTO orders (name, email, phone, address, wedding_date, notes, service_id, service_name, selected_items, total_amount, booking_amount, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [name, email, phone, address, wedding_date, notes, service_id, service_name, JSON.stringify(selected_items), total_amount, booking_amount || 300000, 'pending']
+      `INSERT INTO orders (
+        name, email, phone, address, wedding_date, notes, service_id, service_name,
+        selected_items, total_amount, booking_amount, status,
+        bride_name, groom_name, reference_source
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        name, email, phone, address, wedding_date, notes, service_id, service_name,
+        JSON.stringify(selected_items), total_amount, booking_amount || 300000, 'pending',
+        bride_name.trim(), groom_name.trim(), reference_source || null
+      ]
     );
     res.json({ id: result.insertId, message: 'Order created successfully' });
   } catch (error) {
@@ -1349,7 +1394,10 @@ app.put('/api/orders/:id/selected-items', authenticateToken, async (req, res) =>
 
 // Custom requests routes
 app.post('/api/custom-requests', async (req, res) => {
-  const { name, email, phone, wedding_date, booking_amount, services, additional_requests } = req.body;
+  const {
+    name, email, phone, wedding_date, booking_amount, services, additional_requests,
+    bride_name, groom_name, reference_source
+  } = req.body;
   
   // Debug: Log the received data
   console.log('Received custom request data:', {
@@ -1365,12 +1413,14 @@ app.post('/api/custom-requests', async (req, res) => {
   });
   
   // Validate required fields
-  if (!name || !email || !phone || !wedding_date || 
+  if (!name || !email || !phone || !wedding_date ||
       name.trim() === '' || email.trim() === '' || phone.trim() === '' || wedding_date.trim() === '') {
     return res.status(400).json({ message: 'Missing required fields: name, email, phone, wedding_date' });
   }
-  
-  // Ensure no undefined values are passed to the database
+  if (!bride_name?.trim() || !groom_name?.trim()) {
+    return res.status(400).json({ message: 'Nama pasangan wanita dan pria wajib diisi' });
+  }
+
   const params = [
     name || null,
     email || null,
@@ -1379,7 +1429,10 @@ app.post('/api/custom-requests', async (req, res) => {
     booking_amount ? parseFloat(booking_amount) : 300000,
     services || null,
     additional_requests || null,
-    'pending' // Set default status to pending
+    'pending',
+    bride_name.trim(),
+    groom_name.trim(),
+    reference_source || null
   ];
   
   // Debug: Log the parameters being sent to database
@@ -1387,7 +1440,10 @@ app.post('/api/custom-requests', async (req, res) => {
   
   try {
     const [result] = await db.execute(
-      'INSERT INTO custom_requests (name, email, phone, wedding_date, booking_amount, services, additional_requests, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      `INSERT INTO custom_requests (
+        name, email, phone, wedding_date, booking_amount, services, additional_requests, status,
+        bride_name, groom_name, reference_source
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       params
     );
     res.json({ id: result.insertId, message: 'Custom request submitted successfully' });
@@ -2928,6 +2984,793 @@ app.delete('/api/contact-messages/:id', authenticateToken, async (req, res) => {
     res.status(500).json({ message: 'Database error' });
   }
 });
+
+// Client features routes
+// --- Package sales chart ---
+app.get('/api/admin/package-sales', authenticateToken, async (req, res) => {
+  try {
+    const [rows] = await db.execute(
+      `SELECT COALESCE(NULLIF(TRIM(service_name), ''), 'Tanpa nama paket') AS package_name,
+              COUNT(*) AS order_count,
+              COALESCE(SUM(total_amount), 0) AS total_revenue
+       FROM orders
+       WHERE status IN ('pending', 'confirmed', 'completed')
+       GROUP BY package_name
+       ORDER BY order_count DESC, total_revenue DESC`
+    );
+    res.json({ success: true, data: rows });
+  } catch (error) {
+    console.error('Package sales error:', error);
+    res.status(500).json({ message: 'Database error' });
+  }
+});
+
+// --- Financial summary ---
+app.get('/api/admin/finance/summary', authenticateToken, async (req, res) => {
+  const period = String(req.query.period || 'monthly');
+  const year = parseInt(req.query.year, 10) || new Date().getFullYear();
+  const month = parseInt(req.query.month, 10) || (new Date().getMonth() + 1);
+
+  try {
+    const [settingsRows] = await db.execute(
+      'SELECT accommodation_cost FROM financial_settings WHERE id = 1 LIMIT 1'
+    );
+    const accommodationDefault = Number(settingsRows[0]?.accommodation_cost || 0);
+
+    let dateFilterOrders = 'YEAR(created_at) = ?';
+    let dateFilterCustom = 'YEAR(created_at) = ?';
+    const paramsOrders = [year];
+    const paramsCustom = [year];
+
+    if (period === 'monthly') {
+      dateFilterOrders += ' AND MONTH(created_at) = ?';
+      dateFilterCustom += ' AND MONTH(created_at) = ?';
+      paramsOrders.push(month);
+      paramsCustom.push(month);
+    }
+
+    const [orderIncome] = await db.execute(
+      `SELECT COALESCE(SUM(total_amount), 0) AS total
+       FROM orders WHERE status IN ('confirmed','completed') AND ${dateFilterOrders}`,
+      paramsOrders
+    );
+    const [customIncome] = await db.execute(
+      `SELECT COALESCE(SUM(booking_amount), 0) AS total
+       FROM custom_requests WHERE status IN ('confirmed','completed') AND ${dateFilterCustom}`,
+      paramsCustom
+    );
+
+    const grossIncome =
+      Number(orderIncome[0]?.total || 0) + Number(customIncome[0]?.total || 0);
+
+    const [costRows] = await db.execute(
+      `SELECT COALESCE(SUM(pci.amount), 0) AS production_total,
+              COALESCE(SUM(CASE WHEN ofn.accommodation_applied = 1 THEN 1 ELSE 0 END), 0) AS accommodation_count
+       FROM order_financials ofn
+       LEFT JOIN production_cost_items pci ON pci.order_financial_id = ofn.id
+       LEFT JOIN orders o ON ofn.order_source = 'order' AND ofn.order_id = o.id
+       LEFT JOIN custom_requests cr ON ofn.order_source = 'custom_request' AND ofn.order_id = cr.id
+       WHERE (
+         (ofn.order_source = 'order' AND o.id IS NOT NULL AND ${dateFilterOrders.replace(/created_at/g, 'o.created_at')})
+         OR (ofn.order_source = 'custom_request' AND cr.id IS NOT NULL AND ${dateFilterCustom.replace(/created_at/g, 'cr.created_at')})
+       )`,
+      period === 'monthly' ? [...paramsOrders, ...paramsCustom] : [year, year]
+    );
+
+    const productionTotal = Number(costRows[0]?.production_total || 0);
+    const accommodationTotal =
+      Number(costRows[0]?.accommodation_count || 0) * accommodationDefault;
+    const totalExpenses = productionTotal + accommodationTotal;
+    const netIncome = grossIncome - totalExpenses;
+
+    res.json({
+      success: true,
+      data: {
+        period,
+        year,
+        month: period === 'monthly' ? month : null,
+        grossIncome,
+        productionTotal,
+        accommodationTotal,
+        accommodationDefault,
+        totalExpenses,
+        netIncome
+      }
+    });
+  } catch (error) {
+    console.error('Finance summary error:', error);
+    res.status(500).json({ message: 'Database error' });
+  }
+});
+
+app.get('/api/admin/finance/settings', authenticateToken, async (req, res) => {
+  try {
+    const [rows] = await db.execute(
+      'SELECT accommodation_cost FROM financial_settings WHERE id = 1 LIMIT 1'
+    );
+    res.json({
+      accommodation_cost: Number(rows[0]?.accommodation_cost || 0)
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Database error' });
+  }
+});
+
+app.put('/api/admin/finance/settings', authenticateToken, async (req, res) => {
+  const cost = Number(req.body?.accommodation_cost);
+  if (!Number.isFinite(cost) || cost < 0) {
+    return res.status(400).json({ message: 'Biaya akomodasi tidak valid' });
+  }
+  try {
+    await db.execute(
+      `INSERT INTO financial_settings (id, accommodation_cost) VALUES (1, ?)
+       ON DUPLICATE KEY UPDATE accommodation_cost = VALUES(accommodation_cost)`,
+      [cost]
+    );
+    res.json({ message: 'Pengaturan akomodasi disimpan' });
+  } catch (error) {
+    res.status(500).json({ message: 'Database error' });
+  }
+});
+
+app.get('/api/admin/finance/orders', authenticateToken, async (req, res) => {
+  const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+  const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 10));
+  const offset = (page - 1) * limit;
+  const q = String(req.query.search || req.query.q || '').trim();
+
+  try {
+    const [settingsRows] = await db.execute(
+      'SELECT accommodation_cost FROM financial_settings WHERE id = 1 LIMIT 1'
+    );
+    const accommodationDefault = Number(settingsRows[0]?.accommodation_cost || 0);
+
+    let searchSql = '';
+    const searchParams = [];
+    if (q) {
+      searchSql = ` AND (client_name LIKE ? OR package_name LIKE ?) `;
+      const pattern = `%${q}%`;
+      searchParams.push(pattern, pattern);
+    }
+
+    const unionSql = `
+      SELECT 'order' AS order_source, o.id AS order_id, o.name AS client_name,
+             o.service_name AS package_name, o.total_amount AS gross_amount,
+             o.created_at
+      FROM orders o WHERE o.status IN ('confirmed','completed','pending')
+      UNION ALL
+      SELECT 'custom_request', cr.id, cr.name, cr.services,
+             cr.booking_amount, cr.created_at
+      FROM custom_requests cr WHERE cr.status IN ('confirmed','completed','pending')
+    `;
+
+    const [countRows] = await db.execute(
+      `SELECT COUNT(*) AS total FROM (${unionSql}) AS combined WHERE 1=1 ${searchSql}`,
+      searchParams
+    );
+    const total = countRows[0]?.total || 0;
+
+    const [rows] = await db.execute(
+      `SELECT * FROM (${unionSql}) AS combined WHERE 1=1 ${searchSql}
+       ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+      [...searchParams, limit, offset]
+    );
+
+    const enriched = [];
+    for (const row of rows) {
+      const [finRows] = await db.execute(
+        `SELECT id, accommodation_applied, notes FROM order_financials
+         WHERE order_source = ? AND order_id = ? LIMIT 1`,
+        [row.order_source, row.order_id]
+      );
+      const fin = finRows[0];
+      let items = [];
+      if (fin?.id) {
+        const [itemRows] = await db.execute(
+          `SELECT id, label, amount, sort_order FROM production_cost_items
+           WHERE order_financial_id = ? ORDER BY sort_order ASC, id ASC`,
+          [fin.id]
+        );
+        items = itemRows;
+      }
+      const productionTotal = items.reduce((s, i) => s + Number(i.amount || 0), 0);
+      const accommodationCost = fin?.accommodation_applied ? accommodationDefault : 0;
+      enriched.push({
+        ...row,
+        financial_id: fin?.id || null,
+        accommodation_applied: Boolean(fin?.accommodation_applied),
+        notes: fin?.notes || '',
+        production_items: items,
+        production_total: productionTotal,
+        accommodation_cost: accommodationCost,
+        net_amount: Number(row.gross_amount || 0) - productionTotal - accommodationCost
+      });
+    }
+
+    res.json({
+      success: true,
+      data: enriched,
+      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) || 1 }
+    });
+  } catch (error) {
+    console.error('Finance orders error:', error);
+    res.status(500).json({ message: 'Database error' });
+  }
+});
+
+app.put('/api/admin/finance/orders', authenticateToken, async (req, res) => {
+  const orderSource = parseOrderSource(req.body?.order_source);
+  const orderId = Number(req.body?.order_id);
+  const accommodationApplied = Boolean(req.body?.accommodation_applied);
+  const notes = req.body?.notes != null ? String(req.body.notes) : null;
+  const items = Array.isArray(req.body?.production_items) ? req.body.production_items : [];
+
+  if (!Number.isFinite(orderId) || orderId <= 0) {
+    return res.status(400).json({ message: 'order_id tidak valid' });
+  }
+
+  try {
+    const [existing] = await db.execute(
+      'SELECT id FROM order_financials WHERE order_source = ? AND order_id = ? LIMIT 1',
+      [orderSource, orderId]
+    );
+    let financialId = existing[0]?.id;
+    if (!financialId) {
+      const [ins] = await db.execute(
+        `INSERT INTO order_financials (order_source, order_id, accommodation_applied, notes)
+         VALUES (?, ?, ?, ?)`,
+        [orderSource, orderId, accommodationApplied ? 1 : 0, notes]
+      );
+      financialId = ins.insertId;
+    } else {
+      await db.execute(
+        `UPDATE order_financials SET accommodation_applied = ?, notes = ? WHERE id = ?`,
+        [accommodationApplied ? 1 : 0, notes, financialId]
+      );
+      await db.execute('DELETE FROM production_cost_items WHERE order_financial_id = ?', [financialId]);
+    }
+
+    for (let i = 0; i < items.length; i += 1) {
+      const label = String(items[i]?.label || '').trim();
+      const amount = Number(items[i]?.amount);
+      if (!label || !Number.isFinite(amount)) continue;
+      await db.execute(
+        `INSERT INTO production_cost_items (order_financial_id, label, amount, sort_order)
+         VALUES (?, ?, ?, ?)`,
+        [financialId, label, amount, i]
+      );
+    }
+
+    res.json({ message: 'Catatan keuangan disimpan', financial_id: financialId });
+  } catch (error) {
+    console.error('Finance order upsert error:', error);
+    res.status(500).json({ message: 'Database error' });
+  }
+});
+
+// --- Vendors ---
+app.get('/api/vendors', authenticateToken, async (req, res) => {
+  try {
+    const [rows] = await db.execute(
+      'SELECT * FROM vendors WHERE is_active = 1 ORDER BY name ASC'
+    );
+    res.json(rows);
+  } catch (error) {
+    res.status(500).json({ message: 'Database error' });
+  }
+});
+
+app.get('/api/vendors/all', authenticateToken, async (req, res) => {
+  try {
+    const [rows] = await db.execute('SELECT * FROM vendors ORDER BY name ASC');
+    res.json(rows);
+  } catch (error) {
+    res.status(500).json({ message: 'Database error' });
+  }
+});
+
+app.post('/api/vendors', authenticateToken, async (req, res) => {
+  const name = String(req.body?.name || '').trim();
+  if (!name) return res.status(400).json({ message: 'Nama vendor wajib diisi' });
+  try {
+    const [result] = await db.execute('INSERT INTO vendors (name) VALUES (?)', [name]);
+    res.json({ id: result.insertId, message: 'Vendor ditambahkan' });
+  } catch (error) {
+    res.status(500).json({ message: 'Database error' });
+  }
+});
+
+app.put('/api/vendors/:id', authenticateToken, async (req, res) => {
+  const { id } = req.params;
+  const name = String(req.body?.name || '').trim();
+  const isActive = req.body?.is_active !== false;
+  if (!name) return res.status(400).json({ message: 'Nama vendor wajib diisi' });
+  try {
+    await db.execute('UPDATE vendors SET name = ?, is_active = ? WHERE id = ?', [
+      name, isActive ? 1 : 0, id
+    ]);
+    res.json({ message: 'Vendor diperbarui' });
+  } catch (error) {
+    res.status(500).json({ message: 'Database error' });
+  }
+});
+
+app.delete('/api/vendors/:id', authenticateToken, async (req, res) => {
+  try {
+    await db.execute('UPDATE vendors SET is_active = 0 WHERE id = ?', [req.params.id]);
+    res.json({ message: 'Vendor dinonaktifkan' });
+  } catch (error) {
+    res.status(500).json({ message: 'Database error' });
+  }
+});
+
+app.put('/api/orders/:id/vendor', authenticateToken, async (req, res) => {
+  const vendorId = req.body?.vendor_id != null ? Number(req.body.vendor_id) : null;
+  try {
+    await db.execute('UPDATE orders SET vendor_id = ? WHERE id = ?', [vendorId || null, req.params.id]);
+    res.json({ message: 'Vendor pesanan diperbarui' });
+  } catch (error) {
+    res.status(500).json({ message: 'Database error' });
+  }
+});
+
+app.put('/api/custom-requests/:id/vendor', authenticateToken, async (req, res) => {
+  const vendorId = req.body?.vendor_id != null ? Number(req.body.vendor_id) : null;
+  try {
+    await db.execute('UPDATE custom_requests SET vendor_id = ? WHERE id = ?', [
+      vendorId || null, req.params.id
+    ]);
+    res.json({ message: 'Vendor pesanan diperbarui' });
+  } catch (error) {
+    res.status(500).json({ message: 'Database error' });
+  }
+});
+
+// --- Order progress ---
+app.get('/api/order-progress', authenticateToken, async (req, res) => {
+  const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+  const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 15));
+  const offset = (page - 1) * limit;
+  const q = String(req.query.q || '').trim();
+
+  try {
+    let where = '1=1';
+    const params = [];
+    if (q) {
+      where += ` AND (
+        (op.order_source = 'order' AND o.name LIKE ?)
+        OR (op.order_source = 'custom_request' AND cr.name LIKE ?)
+      )`;
+      const pattern = `%${q}%`;
+      params.push(pattern, pattern);
+    }
+
+    const [countRows] = await db.execute(
+      `SELECT COUNT(*) AS total FROM order_progress op
+       LEFT JOIN orders o ON op.order_source = 'order' AND op.order_id = o.id
+       LEFT JOIN custom_requests cr ON op.order_source = 'custom_request' AND op.order_id = cr.id
+       WHERE ${where}`,
+      params
+    );
+
+    const [rows] = await db.execute(
+      `SELECT op.*,
+              CASE WHEN op.order_source = 'order' THEN o.name ELSE cr.name END AS client_name,
+              CASE WHEN op.order_source = 'order' THEN o.phone ELSE cr.phone END AS client_phone,
+              CASE WHEN op.order_source = 'order' THEN o.wedding_date ELSE cr.wedding_date END AS wedding_date
+       FROM order_progress op
+       LEFT JOIN orders o ON op.order_source = 'order' AND op.order_id = o.id
+       LEFT JOIN custom_requests cr ON op.order_source = 'custom_request' AND op.order_id = cr.id
+       WHERE ${where}
+       ORDER BY op.updated_at DESC
+       LIMIT ? OFFSET ?`,
+      [...params, limit, offset]
+    );
+
+    res.json({
+      items: rows,
+      pagination: {
+        page,
+        limit,
+        total: countRows[0]?.total || 0,
+        totalPages: Math.ceil((countRows[0]?.total || 0) / limit) || 1
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Database error' });
+  }
+});
+
+app.get('/api/order-progress/public/:source/:id', async (req, res) => {
+  const source = parseOrderSource(req.params.source);
+  const id = Number(req.params.id);
+  const phone = String(req.query.phone || '').replace(/\D/g, '');
+
+  if (!Number.isFinite(id) || !phone) {
+    return res.status(400).json({ message: 'Parameter tidak valid' });
+  }
+
+  try {
+    const table = source === 'custom_request' ? 'custom_requests' : 'orders';
+    const [orderRows] = await db.execute(
+      `SELECT phone FROM ${table} WHERE id = ? LIMIT 1`,
+      [id]
+    );
+    const orderPhone = String(orderRows[0]?.phone || '').replace(/\D/g, '');
+    if (!orderRows[0] || orderPhone !== phone) {
+      return res.status(403).json({ message: 'Akses ditolak' });
+    }
+
+    const [rows] = await db.execute(
+      'SELECT * FROM order_progress WHERE order_source = ? AND order_id = ? LIMIT 1',
+      [source, id]
+    );
+    res.json({ progress: rows[0] || null });
+  } catch (error) {
+    res.status(500).json({ message: 'Database error' });
+  }
+});
+
+app.post('/api/order-progress', authenticateToken, async (req, res) => {
+  const orderSource = parseOrderSource(req.body?.order_source);
+  const orderId = Number(req.body?.order_id);
+  const photoStatus = req.body?.photo_status || 'photo_progress';
+  const videoStatus = req.body?.video_status || 'video_progress';
+
+  if (!Number.isFinite(orderId)) {
+    return res.status(400).json({ message: 'order_id tidak valid' });
+  }
+  if (!PHOTO_STATUSES.has(photoStatus) || !VIDEO_STATUSES.has(videoStatus)) {
+    return res.status(400).json({ message: 'Status tidak valid' });
+  }
+
+  try {
+    const [result] = await db.execute(
+      `INSERT INTO order_progress (order_source, order_id, photo_status, video_status, photo_link, video_link)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [
+        orderSource, orderId, photoStatus, videoStatus,
+        req.body?.photo_link || null, req.body?.video_link || null
+      ]
+    );
+    res.json({ id: result.insertId, message: 'Progress pesanan dibuat' });
+  } catch (error) {
+    if (error.code === 'ER_DUP_ENTRY') {
+      return res.status(409).json({ message: 'Progress untuk pesanan ini sudah ada' });
+    }
+    res.status(500).json({ message: 'Database error' });
+  }
+});
+
+app.put('/api/order-progress/:id', authenticateToken, async (req, res) => {
+  const { id } = req.params;
+  const fields = [];
+  const params = [];
+
+  if (req.body?.photo_status != null) {
+    if (!PHOTO_STATUSES.has(req.body.photo_status)) {
+      return res.status(400).json({ message: 'Status foto tidak valid' });
+    }
+    fields.push('photo_status = ?');
+    params.push(req.body.photo_status);
+  }
+  if (req.body?.video_status != null) {
+    if (!VIDEO_STATUSES.has(req.body.video_status)) {
+      return res.status(400).json({ message: 'Status video tidak valid' });
+    }
+    fields.push('video_status = ?');
+    params.push(req.body.video_status);
+  }
+  if (req.body?.photo_link !== undefined) {
+    fields.push('photo_link = ?');
+    params.push(req.body.photo_link || null);
+  }
+  if (req.body?.video_link !== undefined) {
+    fields.push('video_link = ?');
+    params.push(req.body.video_link || null);
+  }
+
+  if (!fields.length) return res.status(400).json({ message: 'Tidak ada data diperbarui' });
+
+  params.push(id);
+  try {
+    const [result] = await db.execute(
+      `UPDATE order_progress SET ${fields.join(', ')} WHERE id = ?`,
+      params
+    );
+    if (!result.affectedRows) return res.status(404).json({ message: 'Data tidak ditemukan' });
+    res.json({ message: 'Progress diperbarui' });
+  } catch (error) {
+    res.status(500).json({ message: 'Database error' });
+  }
+});
+
+app.delete('/api/order-progress/:id', authenticateToken, async (req, res) => {
+  try {
+    await db.execute('DELETE FROM order_progress WHERE id = ?', [req.params.id]);
+    res.json({ message: 'Progress dihapus' });
+  } catch (error) {
+    res.status(500).json({ message: 'Database error' });
+  }
+});
+
+// --- Detail acara ---
+app.get('/api/detail-acara', authenticateToken, async (req, res) => {
+  const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+  const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 10));
+  const offset = (page - 1) * limit;
+  const q = String(req.query.q || '').trim();
+
+  try {
+    let where = '1=1';
+    const params = [];
+    if (q) {
+      where += ' AND (client_name LIKE ? OR bride_name LIKE ? OR groom_name LIKE ?)';
+      const pattern = `%${q}%`;
+      params.push(pattern, pattern, pattern);
+    }
+
+    const [countRows] = await db.execute(
+      `SELECT COUNT(*) AS total FROM detail_acara WHERE ${where}`,
+      params
+    );
+    const [rows] = await db.execute(
+      `SELECT * FROM detail_acara WHERE ${where} ORDER BY wedding_date DESC, id DESC LIMIT ? OFFSET ?`,
+      [...params, limit, offset]
+    );
+
+    res.json({
+      items: rows,
+      pagination: {
+        page,
+        limit,
+        total: countRows[0]?.total || 0,
+        totalPages: Math.ceil((countRows[0]?.total || 0) / limit) || 1
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Database error' });
+  }
+});
+
+app.get('/api/detail-acara/:id', authenticateToken, async (req, res) => {
+  try {
+    const [rows] = await db.execute('SELECT * FROM detail_acara WHERE id = ?', [req.params.id]);
+    if (!rows[0]) return res.status(404).json({ message: 'Tidak ditemukan' });
+    res.json(rows[0]);
+  } catch (error) {
+    res.status(500).json({ message: 'Database error' });
+  }
+});
+
+app.post('/api/detail-acara', authenticateToken, async (req, res) => {
+  const b = req.body || {};
+  const orderSource = b.order_source ? parseOrderSource(b.order_source) : null;
+  const orderId = b.order_id != null ? Number(b.order_id) : null;
+
+  try {
+    if (orderSource && orderId) {
+      const [existing] = await db.execute(
+        'SELECT id FROM detail_acara WHERE order_source = ? AND order_id = ? LIMIT 1',
+        [orderSource, orderId]
+      );
+      if (existing[0]) {
+        return res.status(409).json({ message: 'Detail acara untuk pesanan ini sudah ada', id: existing[0].id });
+      }
+    }
+
+    const [result] = await db.execute(
+      `INSERT INTO detail_acara (
+        order_source, order_id, client_name, client_phone, client_address,
+        bride_name, groom_name, wedding_date, package_name,
+        map1_url, map1_note, map2_url, map2_note, map3_url, map3_note, map4_url, map4_note, notes
+      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+      [
+        orderSource, orderId,
+        b.client_name || null, b.client_phone || null, b.client_address || null,
+        b.bride_name || null, b.groom_name || null, b.wedding_date || null, b.package_name || null,
+        b.map1_url || null, b.map1_note || null,
+        b.map2_url || null, b.map2_note || null,
+        b.map3_url || null, b.map3_note || null,
+        b.map4_url || null, b.map4_note || null,
+        b.notes || null
+      ]
+    );
+    res.json({ id: result.insertId, message: 'Detail acara disimpan' });
+  } catch (error) {
+    res.status(500).json({ message: 'Database error' });
+  }
+});
+
+app.put('/api/detail-acara/:id', authenticateToken, async (req, res) => {
+  const b = req.body || {};
+  try {
+    const [result] = await db.execute(
+      `UPDATE detail_acara SET
+        client_name = ?, client_phone = ?, client_address = ?,
+        bride_name = ?, groom_name = ?, wedding_date = ?, package_name = ?,
+        map1_url = ?, map1_note = ?, map2_url = ?, map2_note = ?,
+        map3_url = ?, map3_note = ?, map4_url = ?, map4_note = ?, notes = ?
+       WHERE id = ?`,
+      [
+        b.client_name || null, b.client_phone || null, b.client_address || null,
+        b.bride_name || null, b.groom_name || null, b.wedding_date || null, b.package_name || null,
+        b.map1_url || null, b.map1_note || null,
+        b.map2_url || null, b.map2_note || null,
+        b.map3_url || null, b.map3_note || null,
+        b.map4_url || null, b.map4_note || null,
+        b.notes || null,
+        req.params.id
+      ]
+    );
+    if (!result.affectedRows) return res.status(404).json({ message: 'Tidak ditemukan' });
+    res.json({ message: 'Detail acara diperbarui' });
+  } catch (error) {
+    res.status(500).json({ message: 'Database error' });
+  }
+});
+
+app.delete('/api/detail-acara/:id', authenticateToken, async (req, res) => {
+  try {
+    await db.execute('DELETE FROM detail_acara WHERE id = ?', [req.params.id]);
+    res.json({ message: 'Detail acara dihapus' });
+  } catch (error) {
+    res.status(500).json({ message: 'Database error' });
+  }
+});
+
+app.post('/api/detail-acara/from-order', authenticateToken, async (req, res) => {
+  const orderSource = parseOrderSource(req.body?.order_source);
+  const orderId = Number(req.body?.order_id);
+  if (!Number.isFinite(orderId)) {
+    return res.status(400).json({ message: 'order_id tidak valid' });
+  }
+
+  try {
+    const [existing] = await db.execute(
+      'SELECT * FROM detail_acara WHERE order_source = ? AND order_id = ? LIMIT 1',
+      [orderSource, orderId]
+    );
+    if (existing[0]) return res.json(existing[0]);
+
+    if (orderSource === 'order') {
+      const [rows] = await db.execute(
+        `SELECT name, phone, address, bride_name, groom_name, wedding_date, service_name
+         FROM orders WHERE id = ? LIMIT 1`,
+        [orderId]
+      );
+      const o = rows[0];
+      if (!o) return res.status(404).json({ message: 'Pesanan tidak ditemukan' });
+      const [result] = await db.execute(
+        `INSERT INTO detail_acara (order_source, order_id, client_name, client_phone, client_address,
+          bride_name, groom_name, wedding_date, package_name)
+         VALUES ('order', ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [orderId, o.name, o.phone, o.address, o.bride_name, o.groom_name, o.wedding_date, o.service_name]
+      );
+      const [created] = await db.execute('SELECT * FROM detail_acara WHERE id = ?', [result.insertId]);
+      return res.json(created[0]);
+    }
+
+    const [rows] = await db.execute(
+      `SELECT name, phone, bride_name, groom_name, wedding_date, services
+       FROM custom_requests WHERE id = ? LIMIT 1`,
+      [orderId]
+    );
+    const c = rows[0];
+    if (!c) return res.status(404).json({ message: 'Pesanan tidak ditemukan' });
+    const [result] = await db.execute(
+      `INSERT INTO detail_acara (order_source, order_id, client_name, client_phone,
+        bride_name, groom_name, wedding_date, package_name)
+       VALUES ('custom_request', ?, ?, ?, ?, ?, ?, ?)`,
+      [orderId, c.name, c.phone, c.bride_name, c.groom_name, c.wedding_date, c.services]
+    );
+    const [created] = await db.execute('SELECT * FROM detail_acara WHERE id = ?', [result.insertId]);
+    return res.json(created[0]);
+  } catch (error) {
+    res.status(500).json({ message: 'Database error' });
+  }
+});
+
+// --- Freelancers inhouse ---
+app.get('/api/freelancers-inhouse', authenticateToken, async (req, res) => {
+  const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+  const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 10));
+  const offset = (page - 1) * limit;
+  const q = String(req.query.search || req.query.q || '').trim();
+
+  try {
+    let where = 'is_active = 1';
+    const params = [];
+    if (q) {
+      where += ' AND name LIKE ?';
+      params.push(`%${q}%`);
+    }
+    const [countRows] = await db.execute(
+      `SELECT COUNT(*) AS total FROM freelancers_inhouse WHERE ${where}`,
+      params
+    );
+    const [rows] = await db.execute(
+      `SELECT * FROM freelancers_inhouse WHERE ${where} ORDER BY name ASC LIMIT ? OFFSET ?`,
+      [...params, limit, offset]
+    );
+    res.json({
+      success: true,
+      data: rows,
+      pagination: {
+        page,
+        limit,
+        total: countRows[0]?.total || 0,
+        totalPages: Math.ceil((countRows[0]?.total || 0) / limit) || 1
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Database error' });
+  }
+});
+
+app.get('/api/freelancers-inhouse/all', authenticateToken, async (req, res) => {
+  try {
+    const [rows] = await db.execute('SELECT * FROM freelancers_inhouse ORDER BY name ASC');
+    res.json(rows);
+  } catch (error) {
+    res.status(500).json({ message: 'Database error' });
+  }
+});
+
+app.post('/api/freelancers-inhouse', authenticateToken, async (req, res) => {
+  const name = String(req.body?.name || '').trim();
+  const photoPrice = Number(req.body?.photo_price) || 0;
+  const videoPrice = Number(req.body?.video_price) || 0;
+  if (!name) return res.status(400).json({ message: 'Nama freelance wajib diisi' });
+  try {
+    const [result] = await db.execute(
+      'INSERT INTO freelancers_inhouse (name, photo_price, video_price) VALUES (?, ?, ?)',
+      [name, photoPrice, videoPrice]
+    );
+    res.json({ id: result.insertId, message: 'Freelance ditambahkan' });
+  } catch (error) {
+    res.status(500).json({ message: 'Database error' });
+  }
+});
+
+app.put('/api/freelancers-inhouse/:id', authenticateToken, async (req, res) => {
+  const name = String(req.body?.name || '').trim();
+  const photoPrice = Number(req.body?.photo_price) || 0;
+  const videoPrice = Number(req.body?.video_price) || 0;
+  const isActive = req.body?.is_active !== false;
+  if (!name) return res.status(400).json({ message: 'Nama freelance wajib diisi' });
+  try {
+    await db.execute(
+      'UPDATE freelancers_inhouse SET name = ?, photo_price = ?, video_price = ?, is_active = ? WHERE id = ?',
+      [name, photoPrice, videoPrice, isActive ? 1 : 0, req.params.id]
+    );
+    res.json({ message: 'Freelance diperbarui' });
+  } catch (error) {
+    res.status(500).json({ message: 'Database error' });
+  }
+});
+
+app.delete('/api/freelancers-inhouse/:id', authenticateToken, async (req, res) => {
+  try {
+    await db.execute('UPDATE freelancers_inhouse SET is_active = 0 WHERE id = ?', [req.params.id]);
+    res.json({ message: 'Freelance dinonaktifkan' });
+  } catch (error) {
+    res.status(500).json({ message: 'Database error' });
+  }
+});
+
+// Reference sources list (public)
+app.get('/api/reference-sources', async (req, res) => {
+  res.json([
+    { value: 'instagram', label: 'Instagram' },
+    { value: 'tiktok', label: 'TikTok' },
+    { value: 'facebook', label: 'Facebook' },
+    { value: 'google', label: 'Google / Pencarian' },
+    { value: 'teman', label: 'Teman / Kerabat' },
+    { value: 'lainnya', label: 'Lainnya' }
+  ]);
+});
+
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

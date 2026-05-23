@@ -5,7 +5,7 @@ import toast from "react-hot-toast";
 import { ChevronLeft, ChevronRight, X, Image as ImageIcon } from "lucide-react";
 import { formatRupiah } from "../utils/formatters";
 
-const API_BASE = "https://api-inventory.isavralabel.com/chekusphoto";
+const API_BASE = "https://api.kingcreativestudio.my.id/chekusphoto";
 function itemImageUrl(filename) {
   if (!filename || filename.startsWith("http")) return filename || "";
   return `${API_BASE}/uploads-weddingsapp/${filename}`;
@@ -22,6 +22,9 @@ const CustomService = () => {
     email: "",
     phone: "",
     wedding_date: "",
+    bride_name: "",
+    groom_name: "",
+    reference_source: "",
     services: [],
     additional_requests: "",
     booking_amount: MIN_BOOKING_AMOUNT,
@@ -76,7 +79,7 @@ const CustomService = () => {
   const fetchCategories = async () => {
     try {
       const response = await fetch(
-        "https://api-inventory.isavralabel.com/chekusphoto/api/items/categories"
+        "https://api.kingcreativestudio.my.id/chekusphoto/api/items/categories"
       );
       const data = await response.json();
       setCategories(data);
@@ -88,10 +91,10 @@ const CustomService = () => {
   const fetchServiceOptions = async (category = "") => {
     try {
       const url = category
-        ? `https://api-inventory.isavralabel.com/chekusphoto/api/items?category=${encodeURIComponent(
+        ? `https://api.kingcreativestudio.my.id/chekusphoto/api/items?category=${encodeURIComponent(
             category
           )}`
-        : "https://api-inventory.isavralabel.com/chekusphoto/api/items";
+        : "https://api.kingcreativestudio.my.id/chekusphoto/api/items";
       const response = await fetch(url);
       const data = await response.json();
       setServiceOptions(data);
@@ -104,7 +107,7 @@ const CustomService = () => {
   const fetchPaymentMethods = async () => {
     try {
       const response = await fetch(
-        "https://api-inventory.isavralabel.com/chekusphoto/api/payment-methods"
+        "https://api.kingcreativestudio.my.id/chekusphoto/api/payment-methods"
       );
       const data = await response.json();
       setPaymentMethods(data);
@@ -119,7 +122,7 @@ const CustomService = () => {
   const fetchCustomServiceContent = async () => {
     try {
       const response = await fetch(
-        "https://api-inventory.isavralabel.com/chekusphoto/api/content-sections/custom_service_section"
+        "https://api.kingcreativestudio.my.id/chekusphoto/api/content-sections/custom_service_section"
       );
       if (response.ok) {
         const data = await response.json();
@@ -166,7 +169,7 @@ const CustomService = () => {
     e.preventDefault();
     try {
       const response = await fetch(
-        "https://api-inventory.isavralabel.com/chekusphoto/api/custom-requests",
+        "https://api.kingcreativestudio.my.id/chekusphoto/api/custom-requests",
         {
           method: "POST",
           headers: {
@@ -904,6 +907,56 @@ const CustomService = () => {
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                       />
                     </div>
+                  </div>
+
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Nama Pasangan (Wanita)
+                      </label>
+                      <input
+                        type="text"
+                        name="bride_name"
+                        value={formData.bride_name}
+                        onChange={handleInputChange}
+                        required
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Nama Pasangan (Pria)
+                      </label>
+                      <input
+                        type="text"
+                        name="groom_name"
+                        value={formData.groom_name}
+                        onChange={handleInputChange}
+                        required
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Dari mana Anda tahu tentang kami?
+                    </label>
+                    <select
+                      name="reference_source"
+                      value={formData.reference_source}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    >
+                      <option value="">Pilih referensi</option>
+                      <option value="instagram">Instagram</option>
+                      <option value="tiktok">TikTok</option>
+                      <option value="facebook">Facebook</option>
+                      <option value="google">Google / Pencarian</option>
+                      <option value="teman">Teman / Kerabat</option>
+                      <option value="lainnya">Lainnya</option>
+                    </select>
                   </div>
 
                   {/* Booking Amount */}

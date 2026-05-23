@@ -6,7 +6,7 @@ import toast, { Toaster } from 'react-hot-toast';
 import AdminLayout from '../../components/AdminLayout';
 import { formatRupiah } from '../../utils/formatters';
 
-const API_BASE = 'https://api-inventory.isavralabel.com/chekusphoto';
+const API_BASE = 'https://api.kingcreativestudio.my.id/chekusphoto';
 function itemImageUrl(filename) {
   if (!filename || filename.startsWith('http')) return filename || '';
   return `${API_BASE}/uploads-weddingsapp/${filename}`;

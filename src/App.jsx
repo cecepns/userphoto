@@ -24,6 +24,11 @@ import AdminOrders from './pages/admin/AdminOrders';
 import AdminOrdersHistory from './pages/admin/AdminOrdersHistory';
 import AdminSuratJalan from './pages/admin/AdminSuratJalan';
 import AdminAlbumProgress from './pages/admin/AdminAlbumProgress';
+import AdminOrderProgress from './pages/admin/AdminOrderProgress';
+import AdminFinance from './pages/admin/AdminFinance';
+import AdminDetailAcara from './pages/admin/AdminDetailAcara';
+import AdminFreelancers from './pages/admin/AdminFreelancers';
+import AdminVendors from './pages/admin/AdminVendors';
 import AdminGallery from './pages/admin/AdminGallery';
 import AdminArticles from './pages/admin/AdminArticles';
 import AdminContactMessages from './pages/admin/AdminContactMessages';
@@ -84,6 +89,31 @@ function App() {
             <Route path="/admin/album-progress" element={
               <ProtectedRoute>
                 <AdminAlbumProgress />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/order-progress" element={
+              <ProtectedRoute>
+                <AdminOrderProgress />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/finance" element={
+              <ProtectedRoute>
+                <AdminFinance />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/detail-acara" element={
+              <ProtectedRoute>
+                <AdminDetailAcara />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/freelancers" element={
+              <ProtectedRoute>
+                <AdminFreelancers />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/vendors" element={
+              <ProtectedRoute>
+                <AdminVendors />
               </ProtectedRoute>
             } />
             <Route path="/admin/articles" element={
