@@ -4,7 +4,7 @@ import AsyncSelect from 'react-select/async';
 import {
   Plus, Trash2, Save, Settings, Edit, ChevronLeft, ChevronRight, X, Search, Landmark, Coins, Truck, DollarSign,
 } from 'lucide-react';
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, PieChart, Pie, Cell, Legend } from 'recharts';
 import toast from 'react-hot-toast';
 import AdminLayout from '../../components/AdminLayout';
 import { formatDate, formatRupiah } from '../../utils/formatters';
@@ -50,6 +50,8 @@ const AdminFinance = () => {
   const [saving, setSaving] = useState(false);
   const [assignments, setAssignments] = useState([]);
   const [chartData, setChartData] = useState([]);
+  const [showTransactions, setShowTransactions] = useState(false);
+
 
   const LIMIT_OPTIONS = [10, 25, 50, 100];
 
@@ -352,62 +354,77 @@ const AdminFinance = () => {
             <button
               onClick={() => setActivePanel('masuk')}
               type="button"
-              className="bg-white rounded-xl shadow p-5 border-l-4 border-green-500 hover:bg-green-50/50 transition-colors text-left group"
+              className="bg-gradient-to-br from-green-500 to-emerald-600 text-white rounded-xl shadow-lg p-5 hover:scale-[1.02] hover:shadow-xl transition-all duration-200 text-left group"
             >
               <div className="flex justify-between items-center">
-                <p className="text-sm text-gray-500">Uang Masuk</p>
-                <Landmark size={20} className="text-green-500" />
+                <p className="text-sm text-green-100 font-medium">Uang Masuk</p>
+                <Landmark size={20} className="text-white" />
               </div>
-              <p className="text-2xl font-bold mt-1 text-gray-800">{formatRupiah(summary.grossIncome)}</p>
-              <p className="text-xs text-gray-400 mt-2 group-hover:text-green-600">Klik untuk cari &amp; rincian →</p>
+              <p className="text-2xl font-bold mt-1">{formatRupiah(summary.grossIncome)}</p>
+              <p className="text-xs text-green-100/80 mt-2 group-hover:text-white transition-colors">Klik untuk cari &amp; rincian →</p>
             </button>
 
             <button
               onClick={() => setActivePanel('produksi')}
               type="button"
-              className="bg-white rounded-xl shadow p-5 border-l-4 border-orange-500 hover:bg-orange-50/50 transition-colors text-left group"
+              className="bg-gradient-to-br from-orange-500 to-amber-600 text-white rounded-xl shadow-lg p-5 hover:scale-[1.02] hover:shadow-xl transition-all duration-200 text-left group"
             >
               <div className="flex justify-between items-center">
-                <p className="text-sm text-gray-500">Biaya Produksi</p>
-                <Coins size={20} className="text-orange-500" />
+                <p className="text-sm text-orange-100 font-medium">Biaya Produksi</p>
+                <Coins size={20} className="text-white" />
               </div>
-              <p className="text-2xl font-bold mt-1 text-gray-800">{formatRupiah(summary.productionTotal)}</p>
-              <p className="text-xs text-gray-400 mt-2 group-hover:text-orange-600">Klik untuk kelola &amp; tambah →</p>
+              <p className="text-2xl font-bold mt-1">{formatRupiah(summary.productionTotal)}</p>
+              <p className="text-xs text-orange-100/80 mt-2 group-hover:text-white transition-colors">Klik untuk kelola &amp; tambah →</p>
             </button>
 
             <button
               onClick={() => setActivePanel('akomodasi')}
               type="button"
-              className="bg-white rounded-xl shadow p-5 border-l-4 border-amber-500 hover:bg-amber-50/50 transition-colors text-left group"
+              className="bg-gradient-to-br from-yellow-500 to-amber-500 text-white rounded-xl shadow-lg p-5 hover:scale-[1.02] hover:shadow-xl transition-all duration-200 text-left group"
             >
               <div className="flex justify-between items-center">
-                <p className="text-sm text-gray-500">Akomodasi</p>
-                <Truck size={20} className="text-amber-500" />
+                <p className="text-sm text-yellow-100 font-medium">Akomodasi</p>
+                <Truck size={20} className="text-white" />
               </div>
-              <p className="text-2xl font-bold mt-1 text-gray-800">{formatRupiah(summary.accommodationTotal)}</p>
-              <p className="text-xs text-gray-400 mt-2 group-hover:text-amber-600">Klik untuk rincian petugas →</p>
+              <p className="text-2xl font-bold mt-1">{formatRupiah(summary.accommodationTotal)}</p>
+              <p className="text-xs text-yellow-100/80 mt-2 group-hover:text-white transition-colors">Klik untuk rincian petugas →</p>
             </button>
 
             <button
               onClick={() => setActivePanel('bersih')}
               type="button"
-              className="bg-white rounded-xl shadow p-5 border-l-4 border-primary-500 hover:bg-primary-50/50 transition-colors text-left group"
+              className="bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-xl shadow-lg p-5 hover:scale-[1.02] hover:shadow-xl transition-all duration-200 text-left group"
             >
               <div className="flex justify-between items-center">
-                <p className="text-sm text-gray-500">Bersih</p>
-                <DollarSign size={20} className="text-primary-500" />
+                <p className="text-sm text-blue-100 font-medium">Bersih</p>
+                <DollarSign size={20} className="text-white" />
               </div>
-              <p className="text-2xl font-bold mt-1 text-gray-800">{formatRupiah(summary.netIncome)}</p>
-              <p className="text-xs text-gray-400 mt-2 group-hover:text-primary-600">Klik untuk rincian laba →</p>
+              <p className="text-2xl font-bold mt-1">{formatRupiah(summary.netIncome)}</p>
+              <p className="text-xs text-blue-100/80 mt-2 group-hover:text-white transition-colors">Klik untuk rincian laba →</p>
             </button>
           </div>
         )}
 
+
+        {/* Toggle Button for Table */}
+        <div className="mb-6 flex justify-center">
+          <button
+            type="button"
+            onClick={() => setShowTransactions(!showTransactions)}
+            className="flex items-center gap-2 px-5 py-2.5 bg-white border border-gray-200 rounded-xl shadow-sm text-sm font-semibold text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-all duration-200"
+          >
+            <Landmark size={18} className="text-gray-400" />
+            {showTransactions ? 'Sembunyikan Daftar Transaksi Keuangan' : 'Daftar Transaksi Keuangan'}
+          </button>
+        </div>
+
         {/* Global Financial List Table */}
-        <div className="bg-white rounded-xl shadow overflow-hidden">
-          <div className="p-4 border-b bg-gray-50">
-            <h3 className="font-semibold text-gray-700">Daftar Transaksi Keuangan</h3>
-          </div>
+        {showTransactions && (
+          <div className="bg-white rounded-xl shadow overflow-hidden mb-6">
+            <div className="p-4 border-b bg-gray-50">
+              <h3 className="font-semibold text-gray-700">Daftar Transaksi Keuangan</h3>
+            </div>
+
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
               <thead className="bg-gray-50">
@@ -520,7 +537,9 @@ const AdminFinance = () => {
               </div>
             </div>
           )}
-        </div>
+          </div>
+        )}
+
 
         {/* Biaya Akomodasi Settings Modal */}
         {showSettings && (
@@ -676,41 +695,91 @@ const AdminFinance = () => {
         )}
 
         {/* Modal: Bersih */}
-        {activePanel === 'bersih' && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 overflow-y-auto">
-            <div className="bg-white rounded-xl max-w-lg w-full my-8 shadow-xl flex flex-col">
-              <div className="flex items-center justify-between px-6 py-4 border-b">
-                <h3 className="text-lg font-semibold text-gray-800">Kalkulasi Pendapatan Bersih</h3>
-                <button type="button" onClick={() => setActivePanel(null)} className="p-1 rounded-lg text-gray-500 hover:bg-gray-100">
-                  <X size={20} />
-                </button>
-              </div>
-              {summary && (
-                <div className="p-6 space-y-4">
-                  <div className="flex justify-between border-b pb-2 text-sm">
-                    <span className="text-gray-600 font-medium">Uang Masuk (Kotor)</span>
-                    <span className="font-bold text-green-600">{formatRupiah(summary.grossIncome)}</span>
-                  </div>
-                  <div className="flex justify-between border-b pb-2 text-sm">
-                    <span className="text-gray-600 font-medium">Biaya Produksi</span>
-                    <span className="font-bold text-red-600">- {formatRupiah(summary.productionTotal)}</span>
-                  </div>
-                  <div className="flex justify-between border-b pb-2 text-sm">
-                    <span className="text-gray-600 font-medium">Akomodasi</span>
-                    <span className="font-bold text-red-600">- {formatRupiah(summary.accommodationTotal)}</span>
-                  </div>
-                  <div className="flex justify-between pt-2 text-base font-bold">
-                    <span className="text-gray-800">Pendapatan Bersih</span>
-                    <span className="text-primary-600">{formatRupiah(summary.netIncome)}</span>
-                  </div>
-                  <div className="bg-blue-50 rounded-lg p-3 text-xs text-blue-700 mt-2">
-                    <span className="font-semibold">Info:</span> Pendapatan bersih diperoleh dari total Uang Masuk dikurangi total Biaya Produksi dan biaya Akomodasi.
-                  </div>
+        {activePanel === 'bersih' && (() => {
+          const totalIncome = summary?.grossIncome || 0;
+          const pieData = totalIncome > 0 ? [
+            { name: 'Biaya Produksi', value: summary.productionTotal, color: '#f97316' }, // orange-500
+            { name: 'Akomodasi', value: summary.accommodationTotal, color: '#eab308' }, // yellow-500
+            { name: 'Sisa Bersih', value: summary.netIncome > 0 ? summary.netIncome : 0, color: '#3b82f6' } // blue-500
+          ].filter(item => item.value > 0) : [];
+
+          const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, index }) => {
+            const RADIAN = Math.PI / 180;
+            const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+            const x = cx + radius * Math.cos(-midAngle * RADIAN);
+            const y = cy + radius * Math.sin(-midAngle * RADIAN);
+            return (
+              <text x={x} y={y} fill="white" textAnchor="middle" dominantBaseline="central" className="text-xs font-bold">
+                {`${(percent * 100).toFixed(0)}%`}
+              </text>
+            );
+          };
+
+          return (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 overflow-y-auto">
+              <div className="bg-white rounded-xl max-w-lg w-full my-8 shadow-xl flex flex-col">
+                <div className="flex items-center justify-between px-6 py-4 border-b">
+                  <h3 className="text-lg font-semibold text-gray-800">Kalkulasi Pendapatan Bersih</h3>
+                  <button type="button" onClick={() => setActivePanel(null)} className="p-1 rounded-lg text-gray-500 hover:bg-gray-100">
+                    <X size={20} />
+                  </button>
                 </div>
-              )}
+                {summary && (
+                  <div className="p-6 space-y-4">
+                    <div className="flex justify-between border-b pb-2 text-sm">
+                      <span className="text-gray-600 font-medium">Uang Masuk (Kotor)</span>
+                      <span className="font-bold text-green-600">{formatRupiah(summary.grossIncome)}</span>
+                    </div>
+                    <div className="flex justify-between border-b pb-2 text-sm">
+                      <span className="text-gray-600 font-medium">Biaya Produksi</span>
+                      <span className="font-bold text-red-600">- {formatRupiah(summary.productionTotal)}</span>
+                    </div>
+                    <div className="flex justify-between border-b pb-2 text-sm">
+                      <span className="text-gray-600 font-medium">Akomodasi</span>
+                      <span className="font-bold text-red-600">- {formatRupiah(summary.accommodationTotal)}</span>
+                    </div>
+                    <div className="flex justify-between pt-2 text-base font-bold">
+                      <span className="text-gray-800">Pendapatan Bersih</span>
+                      <span className="text-primary-600">{formatRupiah(summary.netIncome)}</span>
+                    </div>
+                    <div className="bg-blue-50 rounded-lg p-3 text-xs text-blue-700 mt-2">
+                      <span className="font-semibold">Info:</span> Pendapatan bersih diperoleh dari total Uang Masuk dikurangi total Biaya Produksi dan biaya Akomodasi.
+                    </div>
+
+                    {pieData.length > 0 ? (
+                      <div className="flex flex-col items-center justify-center border-t pt-4">
+                        <h4 className="text-sm font-semibold text-gray-700 mb-2">Persentase Share Pendapatan Bersih</h4>
+                        <ResponsiveContainer width="100%" height={220}>
+                          <PieChart>
+                            <Pie
+                              data={pieData}
+                              cx="50%"
+                              cy="50%"
+                              labelLine={false}
+                              label={renderCustomizedLabel}
+                              outerRadius={80}
+                              fill="#8884d8"
+                              dataKey="value"
+                            >
+                              {pieData.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={entry.color} />
+                              ))}
+                            </Pie>
+                            <Tooltip formatter={(value) => `${formatRupiah(value)} (${((value/totalIncome)*100).toFixed(0)}%)`} />
+                            <Legend />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-gray-400 italic text-center border-t pt-4">Tidak ada data untuk diagram pai.</p>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
+
 
         {/* Add/Edit Catatan Keuangan Modal */}
         {modalMode && (

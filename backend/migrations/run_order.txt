@@ -17,3 +17,4 @@ add_client_features_bundle.sql
 add_detail_acara_maps_json.sql
 add_freelancer_login_and_assignment_link.sql
 add_freelancer_login_password_plain.sql
+add_finance_and_progress_columns.sql

@@ -759,11 +759,13 @@ app.get('/api/orders', authenticateAdmin, async (req, res) => {
     );
     const total = countResult[0].total;
     
-    // Get paginated orders with service base_price
+    // Get paginated orders with service base_price and progress
     const [orders] = await db.execute(`
-      SELECT o.*, s.base_price 
+      SELECT o.*, s.base_price,
+             op.photo_status, op.video_status, op.album_status
       FROM orders o 
       LEFT JOIN services s ON o.service_id = s.id 
+      LEFT JOIN order_progress op ON op.order_source = 'order' AND op.order_id = o.id
       ${whereSql ? whereSql.replace(/status/g, 'o.status') : ''}
       ORDER BY o.created_at DESC 
       LIMIT ? OFFSET ?
@@ -1644,9 +1646,13 @@ app.get('/api/custom-requests', authenticateAdmin, async (req, res) => {
     );
     const total = countResult[0].total;
 
-    // Get paginated custom requests
+    // Get paginated custom requests with progress
     const [requests] = await db.execute(
-      `SELECT * FROM custom_requests ${whereSql} ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+      `SELECT cr.*, op.photo_status, op.video_status, op.album_status
+       FROM custom_requests cr
+       LEFT JOIN order_progress op ON op.order_source = 'custom_request' AND op.order_id = cr.id
+       ${whereSql ? whereSql.replace(/status/g, 'cr.status') : ''}
+       ORDER BY cr.created_at DESC LIMIT ? OFFSET ?`,
       [...listParams, limit, offset]
     );
     
@@ -2662,10 +2668,10 @@ app.get('/api/album-progress/public/:source/:id', async (req, res) => {
     }
 
     const [prows] = await db.execute(
-      `SELECT id, order_source, order_id, status,
+      `SELECT id, order_source, order_id, album_status AS status,
         DATE_FORMAT(estimated_completion, '%Y-%m-%d') AS estimated_completion,
         album_link, created_at, updated_at
-       FROM album_progress
+       FROM order_progress
        WHERE order_source = ? AND order_id = ?
        LIMIT 1`,
       [orderSource, orderId]
@@ -3116,11 +3122,10 @@ app.get('/api/admin/finance/summary', authenticateAdmin, async (req, res) => {
     const grossIncome =
       Number(orderIncome[0]?.total || 0) + Number(customIncome[0]?.total || 0);
 
-    const [costRows] = await db.execute(
-      `SELECT COALESCE(SUM(pci.amount), 0) AS production_total,
-              COALESCE(SUM(CASE WHEN ofn.accommodation_applied = 1 THEN 1 ELSE 0 END), 0) AS accommodation_count
-       FROM order_financials ofn
-       LEFT JOIN production_cost_items pci ON pci.order_financial_id = ofn.id
+    const [prodRows] = await db.execute(
+      `SELECT COALESCE(SUM(pci.amount), 0) AS production_total
+       FROM production_cost_items pci
+       JOIN order_financials ofn ON pci.order_financial_id = ofn.id
        LEFT JOIN orders o ON ofn.order_source = 'order' AND ofn.order_id = o.id
        LEFT JOIN custom_requests cr ON ofn.order_source = 'custom_request' AND ofn.order_id = cr.id
        WHERE (
@@ -3130,9 +3135,26 @@ app.get('/api/admin/finance/summary', authenticateAdmin, async (req, res) => {
       period === 'monthly' ? [...paramsOrders, ...paramsCustom] : [year, year]
     );
 
-    const productionTotal = Number(costRows[0]?.production_total || 0);
-    const accommodationTotal =
-      Number(costRows[0]?.accommodation_count || 0) * accommodationDefault;
+    const [accomRows] = await db.execute(
+      `SELECT COALESCE(SUM(
+         CASE 
+           WHEN ofn.accommodation_cost IS NOT NULL AND ofn.accommodation_cost >= 0 THEN ofn.accommodation_cost
+           WHEN ofn.accommodation_applied = 1 THEN ?
+           ELSE 0
+         END
+       ), 0) AS accommodation_total
+       FROM order_financials ofn
+       LEFT JOIN orders o ON ofn.order_source = 'order' AND ofn.order_id = o.id
+       LEFT JOIN custom_requests cr ON ofn.order_source = 'custom_request' AND ofn.order_id = cr.id
+       WHERE (
+         (ofn.order_source = 'order' AND o.id IS NOT NULL AND ${dateFilterOrders.replace(/created_at/g, 'o.created_at')})
+         OR (ofn.order_source = 'custom_request' AND cr.id IS NOT NULL AND ${dateFilterCustom.replace(/created_at/g, 'cr.created_at')})
+       )`,
+      period === 'monthly' ? [accommodationDefault, ...paramsOrders, ...paramsCustom] : [accommodationDefault, year, year]
+    );
+
+    const productionTotal = Number(prodRows[0]?.production_total || 0);
+    const accommodationTotal = Number(accomRows[0]?.accommodation_total || 0);
     const totalExpenses = productionTotal + accommodationTotal;
     const netIncome = grossIncome - totalExpenses;
 
@@ -3205,6 +3227,12 @@ app.get('/api/admin/finance/orders', authenticateAdmin, async (req, res) => {
       const pattern = `%${q}%`;
       searchParams.push(pattern, pattern);
     }
+    const orderId = req.query.order_id ? Number(req.query.order_id) : null;
+    const orderSource = req.query.order_source ? String(req.query.order_source) : null;
+    if (orderId && orderSource) {
+      searchSql += ` AND order_id = ? AND order_source = ? `;
+      searchParams.push(orderId, orderSource);
+    }
 
     const unionSql = `
       SELECT 'order' AS order_source, o.id AS order_id, o.name AS client_name,
@@ -3232,7 +3260,7 @@ app.get('/api/admin/finance/orders', authenticateAdmin, async (req, res) => {
     const enriched = [];
     for (const row of rows) {
       const [finRows] = await db.execute(
-        `SELECT id, accommodation_applied, notes FROM order_financials
+        `SELECT id, accommodation_applied, accommodation_cost, notes FROM order_financials
          WHERE order_source = ? AND order_id = ? LIMIT 1`,
         [row.order_source, row.order_id]
       );
@@ -3247,15 +3275,17 @@ app.get('/api/admin/finance/orders', authenticateAdmin, async (req, res) => {
         items = itemRows;
       }
       const productionTotal = items.reduce((s, i) => s + Number(i.amount || 0), 0);
-      const accommodationCost = fin?.accommodation_applied ? accommodationDefault : 0;
+      const accommodationCost = fin?.accommodation_cost !== null && fin?.accommodation_cost !== undefined
+        ? Number(fin.accommodation_cost)
+        : (fin?.accommodation_applied ? accommodationDefault : 0);
       enriched.push({
         ...row,
         financial_id: fin?.id || null,
         accommodation_applied: Boolean(fin?.accommodation_applied),
+        accommodation_cost: accommodationCost,
         notes: fin?.notes || '',
         production_items: items,
         production_total: productionTotal,
-        accommodation_cost: accommodationCost,
         net_amount: Number(row.gross_amount || 0) - productionTotal - accommodationCost
       });
     }
@@ -3275,6 +3305,9 @@ async function upsertOrderFinancialRecord(body, mode = 'upsert') {
   const orderSource = parseOrderSource(body?.order_source);
   const orderId = Number(body?.order_id);
   const accommodationApplied = Boolean(body?.accommodation_applied);
+  const accommodationCost = body?.accommodation_cost !== undefined && body?.accommodation_cost !== null && body?.accommodation_cost !== ''
+    ? Number(body.accommodation_cost)
+    : null;
   const notes = body?.notes != null ? String(body.notes) : null;
   const items = Array.isArray(body?.production_items) ? body.production_items : [];
 
@@ -3292,9 +3325,9 @@ async function upsertOrderFinancialRecord(body, mode = 'upsert') {
 
   if (!financialId) {
     const [ins] = await db.execute(
-      `INSERT INTO order_financials (order_source, order_id, accommodation_applied, notes)
-       VALUES (?, ?, ?, ?)`,
-      [orderSource, orderId, accommodationApplied ? 1 : 0, notes]
+      `INSERT INTO order_financials (order_source, order_id, accommodation_applied, accommodation_cost, notes)
+       VALUES (?, ?, ?, ?, ?)`,
+      [orderSource, orderId, accommodationApplied ? 1 : 0, accommodationCost, notes]
     );
     financialId = ins.insertId;
   } else {
@@ -3305,8 +3338,8 @@ async function upsertOrderFinancialRecord(body, mode = 'upsert') {
       throw err;
     }
     await db.execute(
-      `UPDATE order_financials SET accommodation_applied = ?, notes = ? WHERE id = ?`,
-      [accommodationApplied ? 1 : 0, notes, financialId]
+      `UPDATE order_financials SET accommodation_applied = ?, accommodation_cost = ?, notes = ? WHERE id = ?`,
+      [accommodationApplied ? 1 : 0, accommodationCost, notes, financialId]
     );
     await db.execute('DELETE FROM production_cost_items WHERE order_financial_id = ?', [financialId]);
   }
@@ -3540,6 +3573,7 @@ app.post('/api/order-progress', authenticateAdmin, async (req, res) => {
   const orderId = Number(req.body?.order_id);
   const photoStatus = req.body?.photo_status || 'photo_progress';
   const videoStatus = req.body?.video_status || 'video_progress';
+  const albumStatus = req.body?.album_status || 'pending';
 
   if (!Number.isFinite(orderId)) {
     return res.status(400).json({ message: 'order_id tidak valid' });
@@ -3547,14 +3581,19 @@ app.post('/api/order-progress', authenticateAdmin, async (req, res) => {
   if (!PHOTO_STATUSES.has(photoStatus) || !VIDEO_STATUSES.has(videoStatus)) {
     return res.status(400).json({ message: 'Status tidak valid' });
   }
+  const ALBUM_PROGRESS_STATUSES = new Set(['pending', 'diproses', 'selesai']);
+  if (!ALBUM_PROGRESS_STATUSES.has(albumStatus)) {
+    return res.status(400).json({ message: 'Status album tidak valid' });
+  }
 
   try {
     const [result] = await db.execute(
-      `INSERT INTO order_progress (order_source, order_id, photo_status, video_status, photo_link, video_link)
-       VALUES (?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO order_progress (order_source, order_id, photo_status, video_status, photo_link, video_link, album_status, estimated_completion, album_link)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         orderSource, orderId, photoStatus, videoStatus,
-        req.body?.photo_link || null, req.body?.video_link || null
+        req.body?.photo_link || null, req.body?.video_link || null,
+        albumStatus, req.body?.estimated_completion || null, req.body?.album_link || null
       ]
     );
     res.json({ id: result.insertId, message: 'Progress pesanan dibuat' });
@@ -3562,6 +3601,7 @@ app.post('/api/order-progress', authenticateAdmin, async (req, res) => {
     if (error.code === 'ER_DUP_ENTRY') {
       return res.status(409).json({ message: 'Progress untuk pesanan ini sudah ada' });
     }
+    console.error('Order progress create error:', error);
     res.status(500).json({ message: 'Database error' });
   }
 });
@@ -3585,6 +3625,22 @@ app.put('/api/order-progress/:id', authenticateAdmin, async (req, res) => {
     fields.push('video_status = ?');
     params.push(req.body.video_status);
   }
+  if (req.body?.album_status != null) {
+    const ALBUM_PROGRESS_STATUSES = new Set(['pending', 'diproses', 'selesai']);
+    if (!ALBUM_PROGRESS_STATUSES.has(req.body.album_status)) {
+      return res.status(400).json({ message: 'Status album tidak valid' });
+    }
+    fields.push('album_status = ?');
+    params.push(req.body.album_status);
+  }
+  if (req.body?.estimated_completion !== undefined) {
+    fields.push('estimated_completion = ?');
+    params.push(req.body.estimated_completion || null);
+  }
+  if (req.body?.album_link !== undefined) {
+    fields.push('album_link = ?');
+    params.push(req.body.album_link || null);
+  }
   if (req.body?.photo_link !== undefined) {
     fields.push('photo_link = ?');
     params.push(req.body.photo_link || null);
@@ -3605,6 +3661,7 @@ app.put('/api/order-progress/:id', authenticateAdmin, async (req, res) => {
     if (!result.affectedRows) return res.status(404).json({ message: 'Data tidak ditemukan' });
     res.json({ message: 'Progress diperbarui' });
   } catch (error) {
+    console.error('Order progress update error:', error);
     res.status(500).json({ message: 'Database error' });
   }
 });

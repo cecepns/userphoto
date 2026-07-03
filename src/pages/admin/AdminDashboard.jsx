@@ -29,6 +29,8 @@ const AdminDashboard = () => {
   const [stats, setStats] = useState({ orders: 0, services: 0, customRequests: 0, revenue: 0 });
   const [packageSales, setPackageSales] = useState([]);
   const [activeModal, setActiveModal] = useState(null); // 'orders' | 'services' | 'custom' | 'revenue'
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+
 
   // Data untuk masing-masing modal
   const [allOrders, setAllOrders] = useState([]);
@@ -129,16 +131,15 @@ const AdminDashboard = () => {
   }, []);
 
   // Fetch data untuk modal Total Pendapatan
-  const fetchRevenueData = useCallback(async () => {
+  const fetchRevenueData = useCallback(async (targetYear) => {
     setModalLoading(true);
     try {
-      const year = new Date().getFullYear();
-      const summaryData = await apiGet(`${API_ENDPOINTS.ADMIN.FINANCE_SUMMARY}?period=yearly&year=${year}`);
+      const summaryData = await apiGet(`${API_ENDPOINTS.ADMIN.FINANCE_SUMMARY}?period=yearly&year=${targetYear}`);
       setRevenueData(summaryData.data);
       // Fetch monthly breakdowns
       const months = await Promise.all(
         Array.from({ length: 12 }, (_, i) => i + 1).map(m =>
-          apiGet(`${API_ENDPOINTS.ADMIN.FINANCE_SUMMARY}?period=monthly&year=${year}&month=${m}`)
+          apiGet(`${API_ENDPOINTS.ADMIN.FINANCE_SUMMARY}?period=monthly&year=${targetYear}&month=${m}`)
             .then(d => ({ month: MONTH_NAMES[m - 1], value: d.data?.netIncome || 0 }))
             .catch(() => ({ month: MONTH_NAMES[m - 1], value: 0 }))
         )
@@ -156,7 +157,7 @@ const AdminDashboard = () => {
     if (modal === 'orders') fetchAllOrders();
     if (modal === 'services') fetchActiveServices();
     if (modal === 'custom') fetchCustomClients();
-    if (modal === 'revenue') fetchRevenueData();
+    if (modal === 'revenue') fetchRevenueData(selectedYear);
   };
 
   const STAT_CARDS = [
@@ -189,12 +190,12 @@ const AdminDashboard = () => {
     },
     {
       id: 'revenue',
-      label: 'Total Pendapatan',
+      label: 'Pendapatan Bersih',
       value: formatRupiah(stats.revenue),
       color: 'border-purple-500',
       bg: 'hover:bg-purple-50',
       icon: <DollarSign size={22} className="text-purple-500" />,
-      hint: 'Klik untuk lihat pendapatan & grafik',
+      hint: 'Klik untuk lihat pendapatan bersih & grafik',
     },
   ];
 
@@ -229,16 +230,8 @@ const AdminDashboard = () => {
           ))}
         </div>
 
-        {/* Grafik Paket Terlaris */}
-        <div className="bg-white rounded-xl shadow-lg p-6">
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">Grafik Paket Terlaris</h2>
-          {packageSales.length === 0 ? (
-            <p className="text-gray-500 text-sm">Belum ada data penjualan paket.</p>
-          ) : (
-            <PackageSalesChart data={packageSales} />
-          )}
-        </div>
       </AdminLayout>
+
 
       {/* ====== MODAL: Total Pesanan ====== */}
       {activeModal === 'orders' && (
@@ -332,28 +325,41 @@ const AdminDashboard = () => {
           ) : (
             <div className="space-y-6">
               {revenueData && (
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-green-50 rounded-xl p-4 border border-green-100">
-                    <p className="text-xs text-green-600 font-medium">Uang Masuk</p>
-                    <p className="text-xl font-bold text-green-800">{formatRupiah(revenueData.grossIncome)}</p>
-                  </div>
-                  <div className="bg-orange-50 rounded-xl p-4 border border-orange-100">
-                    <p className="text-xs text-orange-600 font-medium">Biaya Produksi</p>
-                    <p className="text-xl font-bold text-orange-800">{formatRupiah(revenueData.productionTotal)}</p>
-                  </div>
-                  <div className="bg-amber-50 rounded-xl p-4 border border-amber-100">
-                    <p className="text-xs text-amber-600 font-medium">Akomodasi</p>
-                    <p className="text-xl font-bold text-amber-800">{formatRupiah(revenueData.accommodationTotal)}</p>
-                  </div>
-                  <div className="bg-purple-50 rounded-xl p-4 border border-purple-100">
-                    <p className="text-xs text-purple-600 font-medium">Pendapatan Bersih</p>
-                    <p className="text-xl font-bold text-purple-800">{formatRupiah(revenueData.netIncome)}</p>
-                  </div>
+                <div className="bg-purple-600 text-white rounded-2xl p-6 shadow-md border-b-4 border-purple-800 flex flex-col items-center justify-center">
+                  <p className="text-sm text-purple-100 font-semibold uppercase tracking-wider mb-1">Pendapatan Bersih ({selectedYear})</p>
+                  <p className="text-3xl font-extrabold">{formatRupiah(revenueData.netIncome)}</p>
                 </div>
               )}
 
               <div>
-                <h3 className="font-semibold text-gray-800 mb-3">Grafik Pendapatan Bersih Bulanan ({new Date().getFullYear()})</h3>
+                <div className="flex items-center justify-between gap-3 mb-3">
+                  <h3 className="font-semibold text-gray-800">Grafik Pendapatan Bersih Bulanan</h3>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const prevYear = selectedYear - 1;
+                        setSelectedYear(prevYear);
+                        fetchRevenueData(prevYear);
+                      }}
+                      className="px-2 py-1 border border-gray-200 rounded-lg hover:bg-gray-50 text-gray-600 text-xs font-bold"
+                    >
+                      &larr;
+                    </button>
+                    <span className="text-sm font-bold text-gray-700">{selectedYear}</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const nextYear = selectedYear + 1;
+                        setSelectedYear(nextYear);
+                        fetchRevenueData(nextYear);
+                      }}
+                      className="px-2 py-1 border border-gray-200 rounded-lg hover:bg-gray-50 text-gray-600 text-xs font-bold"
+                    >
+                      &rarr;
+                    </button>
+                  </div>
+                </div>
                 <ResponsiveContainer width="100%" height={200}>
                   <BarChart data={monthlyRevenue}>
                     <CartesianGrid strokeDasharray="3 3" />
@@ -364,6 +370,7 @@ const AdminDashboard = () => {
                   </BarChart>
                 </ResponsiveContainer>
               </div>
+
 
               <div>
                 <h3 className="font-semibold text-gray-800 mb-3">Paket Terlaris</h3>

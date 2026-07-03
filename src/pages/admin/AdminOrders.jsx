@@ -67,7 +67,7 @@ const AdminOrders = () => {
   const [selectedDate, setSelectedDate] = useState(null);
   const [tableFilteredOrders, setTableFilteredOrders] = useState(null);
   const [showDuplicatesOnly, setShowDuplicatesOnly] = useState(false);
-  const [editableOrderItems, setEditableOrderItems] = useState([]);
+   const [editableOrderItems, setEditableOrderItems] = useState([]);
   const [savingOrderItems, setSavingOrderItems] = useState(false);
   const [vendorsList, setVendorsList] = useState([]);
   const [selectedVendorFilter, setSelectedVendorFilter] = useState("all");
@@ -76,6 +76,13 @@ const AdminOrders = () => {
   const [calendarSearch, setCalendarSearch] = useState("");
   const [activeYear, setActiveYear] = useState(new Date().getFullYear());
   const { appName, contact: siteContact } = useSiteIdentity();
+
+  // Financial States
+  const [orderFinance, setOrderFinance] = useState(null);
+  const [loadingFinance, setLoadingFinance] = useState(false);
+  const [finAccommodationCost, setFinAccommodationCost] = useState('');
+  const [finProductionItems, setFinProductionItems] = useState([]);
+
 
   // Kunci duplikat: email + wedding_date sama = kemungkinan pesanan ganda
   const duplicateKey = (order) =>
@@ -435,6 +442,121 @@ const AdminOrders = () => {
     }
   };
 
+  const fetchOrderFinance = async (order) => {
+    if (!order) return;
+    setLoadingFinance(true);
+    try {
+      const token = localStorage.getItem('admin_token');
+      const res = await fetch(`${API_BASE}/admin/finance/orders?order_id=${order.id}&order_source=${order.orderType}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      
+      let parsedItems = [];
+      if (order.orderType === "custom_request") {
+        parsedItems = Array.isArray(order.items_details) ? order.items_details : [];
+      } else {
+        try {
+          parsedItems = JSON.parse(order.selected_items || "[]");
+        } catch {
+          parsedItems = [];
+        }
+      }
+
+      const isAlbumOrDrone = (name) => {
+        const n = String(name || '').toLowerCase();
+        return n.includes('album') || n.includes('drone');
+      };
+      const matchingCheckoutItems = parsedItems.filter(item => isAlbumOrDrone(item.name || item.item_name));
+
+      if (data.success && data.data && data.data.length > 0) {
+        const fin = data.data[0];
+        setOrderFinance(fin);
+        setFinAccommodationCost(fin.accommodation_cost != null ? String(fin.accommodation_cost) : '');
+        
+        const savedItems = Array.isArray(fin.production_items) ? fin.production_items : [];
+        const merged = [];
+        
+        matchingCheckoutItems.forEach(cItem => {
+          const cName = (cItem.name || cItem.item_name || "Item").trim();
+          const match = savedItems.find(s => s.label.trim().toLowerCase() === cName.toLowerCase());
+          merged.push({
+            label: cName,
+            amount: match ? String(match.amount) : '0'
+          });
+        });
+
+        savedItems.forEach(s => {
+          const alreadyAdded = merged.some(m => m.label.toLowerCase() === s.label.trim().toLowerCase());
+          if (!alreadyAdded) {
+            merged.push({
+              label: s.label,
+              amount: String(s.amount)
+            });
+          }
+        });
+
+        setFinProductionItems(merged);
+      } else {
+        setOrderFinance({
+          financial_id: null,
+          accommodation_applied: false,
+          notes: '',
+          production_items: [],
+          production_total: 0,
+        });
+        setFinAccommodationCost('');
+        
+        const initial = matchingCheckoutItems.map(cItem => ({
+          label: (cItem.name || cItem.item_name || "Item").trim(),
+          amount: '0'
+        }));
+        setFinProductionItems(initial);
+      }
+    } catch (e) {
+      console.error("Error fetching order finance:", e);
+    } finally {
+      setLoadingFinance(false);
+    }
+  };
+
+  const handleSaveFinanceDetails = async () => {
+    if (!selectedOrder) return;
+    try {
+      const token = localStorage.getItem('admin_token');
+      const payload = {
+        order_source: selectedOrder.orderType,
+        order_id: selectedOrder.id,
+        accommodation_applied: Number(finAccommodationCost) > 0,
+        accommodation_cost: finAccommodationCost === '' ? null : Number(finAccommodationCost),
+        notes: orderFinance?.notes || '',
+        production_items: finProductionItems.map(item => ({
+          label: item.label.trim(),
+          amount: Number(item.amount) || 0
+        }))
+      };
+
+      const res = await fetch(`${API_BASE}/admin/finance/orders`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success("Biaya produksi & akomodasi disimpan ke keuangan!");
+        fetchOrderFinance(selectedOrder);
+      } else {
+        toast.error(data.message || "Gagal menyimpan data keuangan");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Gagal menghubungkan ke server");
+    }
+  };
+
   const handleViewDetail = (order) => {
     if (order.orderType === "order") {
       let parsedItems = [];
@@ -455,8 +577,10 @@ const AdminOrders = () => {
       setEditableOrderItems([]);
     }
     setSelectedOrder(order);
+    fetchOrderFinance(order);
     setShowDetailModal(true);
   };
+
 
   const handleRemoveEditableItem = (itemIndex) => {
     setEditableOrderItems((prev) => prev.filter((_, index) => index !== itemIndex));
@@ -1397,9 +1521,20 @@ const AdminOrders = () => {
                               <span className="text-xs text-white/80 mt-1">
                                 {formatDate(order.created_at)}
                               </span>
-                              <span className="text-[10px] mt-0.5 px-1.5 py-0.5 rounded bg-white text-black border border-gray-300">
-                                {order.orderType === "custom_request" ? "Custom" : "Pesan Biasa"}
-                              </span>
+                              {order.orderType === "custom_request" ? (
+                                <span className="text-[10px] mt-0.5 px-1.5 py-0.5 rounded bg-white text-black border border-gray-300">
+                                  Custom
+                                </span>
+                              ) : (order.photo_status === 'completed' && order.video_status === 'completed' && order.album_status === 'selesai') ? (
+                                <span className="text-[10px] mt-0.5 px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 font-bold border border-blue-200">
+                                  Selesai
+                                </span>
+                              ) : (
+                                <span className="text-[10px] mt-0.5 px-1.5 py-0.5 rounded bg-red-100 text-red-700 font-bold border border-red-200">
+                                  Progres
+                                </span>
+                              )}
+
                               {duplicateKeysSet.has(duplicateKey(order)) && (
                                 <span className="text-[10px] mt-0.5 px-1.5 py-0.5 rounded bg-white text-black border border-gray-300" title="Email & tanggal pernikahan sama dengan pesanan lain">
                                   Duplikat ke-
@@ -1782,8 +1917,71 @@ const AdminOrders = () => {
                           )}
                         </div>
                       </div>
+
+                      {/* Biaya Produksi & Akomodasi */}
+                      <div className="mt-4 border-t pt-4">
+                        <span className="font-semibold text-gray-700 mb-2 block">
+                          Biaya Produksi &amp; Akomodasi:
+                        </span>
+                        {loadingFinance ? (
+                          <p className="text-xs text-gray-400 italic">Memuat data keuangan...</p>
+                        ) : (
+                          <div className="space-y-3">
+                            {/* Biaya Produksi Items */}
+                            {finProductionItems.length > 0 ? (
+                              <div className="space-y-2 bg-gray-50 p-3 rounded-lg border border-gray-100">
+                                <p className="text-xs font-semibold text-gray-500 mb-1">Rincian Biaya Produksi Item</p>
+                                {finProductionItems.map((item, idx) => (
+                                  <div key={idx} className="flex items-center gap-2">
+                                    <span className="text-xs text-gray-600 flex-1 truncate" title={item.label}>
+                                      {item.label}
+                                    </span>
+                                    <input
+                                      type="number"
+                                      min={0}
+                                      value={item.amount}
+                                      onChange={(e) => {
+                                        const val = e.target.value;
+                                        setFinProductionItems(prev => prev.map((p, i) => i === idx ? { ...p, amount: val } : p));
+                                      }}
+                                      className="w-28 border rounded-lg px-2 py-1 text-xs text-right focus:ring-1 focus:ring-primary-500"
+                                      placeholder="Rp 0"
+                                    />
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-xs text-gray-400 italic">Tidak ada item album atau drone yang di-checkout.</p>
+                            )}
+
+                            {/* Biaya Akomodasi Custom */}
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-gray-600 flex-1">
+                                Biaya Akomodasi Custom
+                              </span>
+                              <input
+                                type="number"
+                                min={0}
+                                value={finAccommodationCost}
+                                onChange={(e) => setFinAccommodationCost(e.target.value)}
+                                className="w-28 border rounded-lg px-2 py-1 text-xs text-right focus:ring-1 focus:ring-primary-500"
+                                placeholder="Rp 0"
+                              />
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={handleSaveFinanceDetails}
+                              className="w-full mt-2 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-semibold transition-colors"
+                            >
+                              Simpan Biaya &amp; Akomodasi
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
+
 
                   <div>
                     <h3 className="text-lg font-semibold text-gray-800 mb-4">

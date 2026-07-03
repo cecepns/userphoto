@@ -23,7 +23,6 @@ import AdminPayments from './pages/admin/AdminPayments';
 import AdminOrders from './pages/admin/AdminOrders';
 import AdminOrdersHistory from './pages/admin/AdminOrdersHistory';
 import AdminSuratJalan from './pages/admin/AdminSuratJalan';
-import AdminAlbumProgress from './pages/admin/AdminAlbumProgress';
 import AdminOrderProgress from './pages/admin/AdminOrderProgress';
 import AdminFinance from './pages/admin/AdminFinance';
 import AdminDetailAcara from './pages/admin/AdminDetailAcara';
@@ -93,11 +92,6 @@ function App() {
             <Route path="/admin/surat-jalan" element={
               <ProtectedRoute>
                 <AdminSuratJalan />
-              </ProtectedRoute>
-            } />
-            <Route path="/admin/album-progress" element={
-              <ProtectedRoute>
-                <AdminAlbumProgress />
               </ProtectedRoute>
             } />
             <Route path="/admin/order-progress" element={

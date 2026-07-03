@@ -38,7 +38,11 @@ const AdminOrderProgress = () => {
     video_status: 'video_progress',
     photo_link: '',
     video_link: '',
+    album_status: 'pending',
+    estimated_completion: '',
+    album_link: '',
   });
+
 
   const fetchList = useCallback(async () => {
     setLoading(true);
@@ -104,6 +108,9 @@ const AdminOrderProgress = () => {
       video_status: 'video_progress',
       photo_link: '',
       video_link: '',
+      album_status: 'pending',
+      estimated_completion: '',
+      album_link: '',
     });
     setSelectedOrderOpt(null);
     setShowModal(true);
@@ -116,7 +123,11 @@ const AdminOrderProgress = () => {
       video_status: row.video_status,
       photo_link: row.photo_link || '',
       video_link: row.video_link || '',
+      album_status: row.album_status || 'pending',
+      estimated_completion: row.estimated_completion ? String(row.estimated_completion).slice(0, 10) : '',
+      album_link: row.album_link || '',
     });
+
     const isCustom = row.order_source === 'custom_request';
     setSelectedOrderOpt({
       value: isCustom ? `custom:${row.order_id}` : `order:${row.order_id}`,
@@ -234,14 +245,17 @@ const AdminOrderProgress = () => {
                 <th className="px-4 py-3 text-left">Foto</th>
                 <th className="px-4 py-3 text-left">Video</th>
                 <th className="px-4 py-3 text-left">Link</th>
+                <th className="px-4 py-3 text-left">Status Album</th>
                 <th className="px-4 py-3">Aksi</th>
+
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={5} className="p-8 text-center">Memuat...</td></tr>
+                <tr><td colSpan={6} className="p-8 text-center">Memuat...</td></tr>
               ) : filteredItems.length === 0 ? (
-                <tr><td colSpan={5} className="p-8 text-center text-gray-500">
+                <tr><td colSpan={6} className="p-8 text-center text-gray-500">
+
                   {activeFilter === 'progress' ? 'Tidak ada pesanan yang sedang progres' :
                    activeFilter === 'done' ? 'Tidak ada pesanan yang selesai' : 'Belum ada data'}
                 </td></tr>
@@ -262,12 +276,28 @@ const AdminOrderProgress = () => {
                     <td className="px-4 py-3 text-xs">
                       {row.photo_link && <a href={row.photo_link} target="_blank" rel="noreferrer" className="text-primary-600 block hover:underline">📷 Foto</a>}
                       {row.video_link && <a href={row.video_link} target="_blank" rel="noreferrer" className="text-primary-600 block hover:underline">🎬 Video</a>}
-                      {!row.photo_link && !row.video_link && <span className="text-gray-400">–</span>}
+                      {row.album_link && <a href={row.album_link} target="_blank" rel="noreferrer" className="text-primary-600 block hover:underline">📖 Album</a>}
+                      {!row.photo_link && !row.video_link && !row.album_link && <span className="text-gray-400">–</span>}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold ${
+                        row.album_status === 'selesai'
+                          ? 'bg-green-100 text-green-800'
+                          : row.album_status === 'diproses'
+                          ? 'bg-amber-100 text-amber-800'
+                          : 'bg-gray-100 text-gray-700'
+                      }`}>
+                        {row.album_status === 'selesai' ? 'Selesai' : row.album_status === 'diproses' ? 'Diproses' : 'Pending'}
+                      </span>
+                      {row.estimated_completion && (
+                        <p className="text-[10px] text-gray-500 mt-1">Est: {formatDate(row.estimated_completion)}</p>
+                      )}
                     </td>
                     <td className="px-4 py-3 flex gap-2 justify-center">
                       <button type="button" onClick={() => openEdit(row)} className="text-primary-600 p-1 rounded hover:bg-primary-50"><Edit size={18} /></button>
                       <button type="button" onClick={() => handleDelete(row.id)} className="text-red-600 p-1 rounded hover:bg-red-50"><Trash2 size={18} /></button>
                     </td>
+
                   </tr>
                 ))
               )}
@@ -344,6 +374,28 @@ const AdminOrderProgress = () => {
                   </select>
                 </div>
                 <div>
+                  <label className="text-sm font-medium">Status Album</label>
+                  <select
+                    value={form.album_status}
+                    onChange={(e) => setForm({ ...form, album_status: e.target.value })}
+                    className="w-full border rounded-lg px-3 py-2 mt-1"
+                  >
+                    <option value="pending">Pending</option>
+                    <option value="diproses">Diproses</option>
+                    <option value="selesai">Selesai</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Estimasi Selesai (Album)</label>
+                  <input
+                    type="date"
+                    value={form.estimated_completion}
+                    onChange={(e) => setForm({ ...form, estimated_completion: e.target.value })}
+                    className="w-full border rounded-lg px-3 py-2 mt-1"
+                  />
+                </div>
+
+                <div>
                   <label className="text-sm font-medium">Link Foto</label>
                   <input
                     type="url"
@@ -363,6 +415,17 @@ const AdminOrderProgress = () => {
                     placeholder="https://..."
                   />
                 </div>
+                <div>
+                  <label className="text-sm font-medium">Link Album</label>
+                  <input
+                    type="url"
+                    value={form.album_link}
+                    onChange={(e) => setForm({ ...form, album_link: e.target.value })}
+                    className="w-full border rounded-lg px-3 py-2 mt-1"
+                    placeholder="https://..."
+                  />
+                </div>
+
                 <div className="flex gap-2 justify-end">
                   <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 border rounded-lg">Batal</button>
                   <button type="submit" className="px-4 py-2 bg-primary-600 text-white rounded-lg">Simpan</button>
