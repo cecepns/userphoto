@@ -82,6 +82,8 @@ const AdminOrders = () => {
   const [loadingFinance, setLoadingFinance] = useState(false);
   const [finAccommodationCost, setFinAccommodationCost] = useState('');
   const [finProductionItems, setFinProductionItems] = useState([]);
+  const [showAllProdItems, setShowAllProdItems] = useState(false);
+
 
 
   // Kunci duplikat: email + wedding_date sama = kemungkinan pesanan ganda
@@ -463,12 +465,6 @@ const AdminOrders = () => {
         }
       }
 
-      const isAlbumOrDrone = (name) => {
-        const n = String(name || '').toLowerCase();
-        return n.includes('album') || n.includes('drone');
-      };
-      const matchingCheckoutItems = parsedItems.filter(item => isAlbumOrDrone(item.name || item.item_name));
-
       if (data.success && data.data && data.data.length > 0) {
         const fin = data.data[0];
         setOrderFinance(fin);
@@ -477,7 +473,7 @@ const AdminOrders = () => {
         const savedItems = Array.isArray(fin.production_items) ? fin.production_items : [];
         const merged = [];
         
-        matchingCheckoutItems.forEach(cItem => {
+        parsedItems.forEach(cItem => {
           const cName = (cItem.name || cItem.item_name || "Item").trim();
           const match = savedItems.find(s => s.label.trim().toLowerCase() === cName.toLowerCase());
           merged.push({
@@ -507,7 +503,7 @@ const AdminOrders = () => {
         });
         setFinAccommodationCost('');
         
-        const initial = matchingCheckoutItems.map(cItem => ({
+        const initial = parsedItems.map(cItem => ({
           label: (cItem.name || cItem.item_name || "Item").trim(),
           amount: '0'
         }));
@@ -519,6 +515,7 @@ const AdminOrders = () => {
       setLoadingFinance(false);
     }
   };
+
 
   const handleSaveFinanceDetails = async () => {
     if (!selectedOrder) return;
@@ -558,6 +555,7 @@ const AdminOrders = () => {
   };
 
   const handleViewDetail = (order) => {
+    setShowAllProdItems(false);
     if (order.orderType === "order") {
       let parsedItems = [];
       try {
@@ -580,6 +578,7 @@ const AdminOrders = () => {
     fetchOrderFinance(order);
     setShowDetailModal(true);
   };
+
 
 
   const handleRemoveEditableItem = (itemIndex) => {
@@ -1254,6 +1253,9 @@ const AdminOrders = () => {
                   type="button"
                   onClick={() => {
                     setCalendarMonth(new Date(activeYear, mIdx, 1));
+                    setTimeout(() => {
+                      document.getElementById("booking-calendar")?.scrollIntoView({ behavior: "smooth" });
+                    }, 50);
                   }}
                   className={`p-3 rounded-lg border text-center transition-all ${
                     isActive
@@ -1272,7 +1274,8 @@ const AdminOrders = () => {
         </div>
 
         {/* Booking Calendar */}
-        <div className="mb-8 bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+        <div id="booking-calendar" className="mb-8 bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+
           <div className="flex flex-col lg:flex-row lg:items-start gap-6">
             <div className="flex-1">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
@@ -1928,31 +1931,59 @@ const AdminOrders = () => {
                         ) : (
                           <div className="space-y-3">
                             {/* Biaya Produksi Items */}
-                            {finProductionItems.length > 0 ? (
-                              <div className="space-y-2 bg-gray-50 p-3 rounded-lg border border-gray-100">
-                                <p className="text-xs font-semibold text-gray-500 mb-1">Rincian Biaya Produksi Item</p>
-                                {finProductionItems.map((item, idx) => (
-                                  <div key={idx} className="flex items-center gap-2">
-                                    <span className="text-xs text-gray-600 flex-1 truncate" title={item.label}>
-                                      {item.label}
-                                    </span>
-                                    <input
-                                      type="number"
-                                      min={0}
-                                      value={item.amount}
-                                      onChange={(e) => {
-                                        const val = e.target.value;
-                                        setFinProductionItems(prev => prev.map((p, i) => i === idx ? { ...p, amount: val } : p));
-                                      }}
-                                      className="w-28 border rounded-lg px-2 py-1 text-xs text-right focus:ring-1 focus:ring-primary-500"
-                                      placeholder="Rp 0"
-                                    />
-                                  </div>
-                                ))}
+                            <div className="mb-2">
+                              <div className="flex items-center justify-between mb-1.5">
+                                <p className="text-xs font-semibold text-gray-500">Rincian Biaya Produksi Item</p>
+                                {finProductionItems.length > 0 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setShowAllProdItems(!showAllProdItems)}
+                                    className="text-[10px] text-primary-600 hover:underline font-semibold"
+                                  >
+                                    {showAllProdItems ? "Tampilkan Lebih Sedikit" : "Tampilkan Semua Item"}
+                                  </button>
+                                )}
                               </div>
-                            ) : (
-                              <p className="text-xs text-gray-400 italic">Tidak ada item album atau drone yang di-checkout.</p>
-                            )}
+                              {(() => {
+                                const displayed = showAllProdItems
+                                  ? finProductionItems
+                                  : finProductionItems.filter(item => {
+                                      const n = String(item.label || '').toLowerCase();
+                                      const isTarget = n.includes('album') || n.includes('drone');
+                                      const hasValue = Number(item.amount) > 0;
+                                      return isTarget || hasValue;
+                                    });
+
+                                return displayed.length > 0 ? (
+                                  <div className="space-y-2 bg-gray-50 p-3 rounded-lg border border-gray-100 mb-3">
+                                    {displayed.map((item, idx) => {
+                                      const origIdx = finProductionItems.findIndex(p => p.label === item.label);
+                                      return (
+                                        <div key={idx} className="flex items-center gap-2">
+                                          <span className="text-xs text-gray-600 flex-1 truncate" title={item.label}>
+                                            {item.label}
+                                          </span>
+                                          <input
+                                            type="number"
+                                            min={0}
+                                            value={item.amount}
+                                            onChange={(e) => {
+                                              const val = e.target.value;
+                                              setFinProductionItems(prev => prev.map((p, i) => i === origIdx ? { ...p, amount: val } : p));
+                                            }}
+                                            className="w-28 border rounded-lg px-2 py-1 text-xs text-right focus:ring-1 focus:ring-primary-500"
+                                            placeholder="Rp 0"
+                                          />
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                ) : (
+                                  <p className="text-xs text-gray-400 italic mb-3">Tidak ada item album atau drone yang di-checkout.</p>
+                                );
+                              })()}
+                            </div>
+
 
                             {/* Biaya Akomodasi Custom */}
                             <div className="flex items-center gap-2">
