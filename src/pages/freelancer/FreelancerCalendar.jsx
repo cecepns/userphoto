@@ -182,46 +182,95 @@ const FreelancerCalendar = () => {
   };
 
 
-  const handleCopyTextFromId = async (detailAcaraId) => {
-    try {
-      const data = await freelancerGet(`/api/detail-acara/${detailAcaraId}`);
-      if (!data) {
-        toast.error("Gagal memuat detail acara");
-        return;
+  const handleCopyTextFromId = (detailAcaraId) => {
+    const copyPromise = new Promise(async (resolve, reject) => {
+      try {
+        const data = await freelancerGet(`/api/detail-acara/${detailAcaraId}`);
+        if (!data) {
+          reject(new Error("Gagal memuat detail acara"));
+          return;
+        }
+
+        const maps = Array.isArray(data.maps) && data.maps.length ? data.maps : [
+          { url: data.map1_url || '', note: data.map1_note || '' },
+          { url: data.map2_url || '', note: data.map2_note || '' },
+          { url: data.map3_url || '', note: data.map3_note || '' },
+          { url: data.map4_url || '', note: data.map4_note || '' },
+        ].filter((m) => m.url || m.note);
+
+        let text = `Nama Client: ${data.client_name || '-'}\n`;
+        text += `Telepon: ${data.client_phone || '-'}\n`;
+        text += `Alamat: ${data.client_address || '-'}\n`;
+        text += `Pasangan: ${data.bride_name || '-'} & ${data.groom_name || '-'}\n`;
+        text += `Tanggal Acara: ${data.wedding_date ? formatDate(data.wedding_date) : '-'}\n`;
+        text += `Paket: ${data.package_name || '-'}\n\n`;
+
+        maps.forEach((m, index) => {
+          if (!m.url && !m.note) return;
+          text += `Lokasi ${index + 1}:\n`;
+          if (m.url) text += `Maps: ${m.url}\n`;
+          if (m.note) text += `Catatan: ${m.note}\n`;
+          text += `\n`;
+        });
+
+        if (data.notes) {
+          text += `Catatan umum: ${data.notes}\n`;
+        }
+
+        resolve(new Blob([text.trim()], { type: "text/plain" }));
+      } catch (err) {
+        reject(err);
       }
-      
-      const maps = Array.isArray(data.maps) && data.maps.length ? data.maps : [
-        { url: data.map1_url || '', note: data.map1_note || '' },
-        { url: data.map2_url || '', note: data.map2_note || '' },
-        { url: data.map3_url || '', note: data.map3_note || '' },
-        { url: data.map4_url || '', note: data.map4_note || '' },
-      ].filter((m) => m.url || m.note);
+    });
 
-      let text = `Nama Client: ${data.client_name || '-'}\n`;
-      text += `Telepon: ${data.client_phone || '-'}\n`;
-      text += `Alamat: ${data.client_address || '-'}\n`;
-      text += `Pasangan: ${data.bride_name || '-'} & ${data.groom_name || '-'}\n`;
-      text += `Tanggal Acara: ${data.wedding_date ? formatDate(data.wedding_date) : '-'}\n`;
-      text += `Paket: ${data.package_name || '-'}\n\n`;
-
-      maps.forEach((m, index) => {
-        if (!m.url && !m.note) return;
-        text += `Lokasi ${index + 1}:\n`;
-        if (m.url) text += `Maps: ${m.url}\n`;
-        if (m.note) text += `Catatan: ${m.note}\n`;
-        text += `\n`;
+    if (navigator.clipboard && navigator.clipboard.write) {
+      navigator.clipboard.write([
+        new ClipboardItem({
+          "text/plain": copyPromise,
+        })
+      ]).then(() => {
+        toast.success('Detail acara disalin ke clipboard');
+      }).catch((err) => {
+        console.error("Async copy error:", err);
+        toast.error("Gagal menyalin detail acara");
       });
+    } else {
+      freelancerGet(`/api/detail-acara/${detailAcaraId}`).then((data) => {
+        if (!data) return;
+        const maps = Array.isArray(data.maps) && data.maps.length ? data.maps : [
+          { url: data.map1_url || '', note: data.map1_note || '' },
+          { url: data.map2_url || '', note: data.map2_note || '' },
+          { url: data.map3_url || '', note: data.map3_note || '' },
+          { url: data.map4_url || '', note: data.map4_note || '' },
+        ].filter((m) => m.url || m.note);
 
-      if (data.notes) {
-        text += `Catatan umum: ${data.notes}\n`;
-      }
+        let text = `Nama Client: ${data.client_name || '-'}\n`;
+        text += `Telepon: ${data.client_phone || '-'}\n`;
+        text += `Alamat: ${data.client_address || '-'}\n`;
+        text += `Pasangan: ${data.bride_name || '-'} & ${data.groom_name || '-'}\n`;
+        text += `Tanggal Acara: ${data.wedding_date ? formatDate(data.wedding_date) : '-'}\n`;
+        text += `Paket: ${data.package_name || '-'}\n\n`;
 
-      navigator.clipboard.writeText(text.trim());
-      toast.success('Detail acara disalin ke clipboard');
-    } catch (err) {
-      toast.error("Gagal menyalin detail acara");
+        maps.forEach((m, index) => {
+          if (!m.url && !m.note) return;
+          text += `Lokasi ${index + 1}:\n`;
+          if (m.url) text += `Maps: ${m.url}\n`;
+          if (m.note) text += `Catatan: ${m.note}\n`;
+          text += `\n`;
+        });
+
+        if (data.notes) {
+          text += `Catatan umum: ${data.notes}\n`;
+        }
+        
+        navigator.clipboard.writeText(text.trim());
+        toast.success('Detail acara disalin ke clipboard');
+      }).catch(() => {
+        toast.error("Browser tidak mendukung salin otomatis.");
+      });
     }
   };
+
 
 
   const days = getCalendarDays(calendarMonth);
