@@ -284,14 +284,6 @@ const AdminFinance = () => {
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
-              onClick={openCreate}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
-            >
-              <Plus size={18} />
-              Tambah catatan
-            </button>
-            <button
-              type="button"
               onClick={() => setShowSettings(true)}
               className="inline-flex items-center gap-2 px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-900 transition-colors"
             >
@@ -299,6 +291,7 @@ const AdminFinance = () => {
               Biaya Akomodasi
             </button>
           </div>
+
         </div>
 
         {/* Filter Period */}
@@ -439,14 +432,15 @@ const AdminFinance = () => {
                   <th className="px-4 py-3 text-right">Masuk</th>
                   <th className="px-4 py-3 text-right">Pengeluaran</th>
                   <th className="px-4 py-3 text-right">Bersih</th>
-                  <th className="px-4 py-3 text-center w-28">Aksi</th>
                 </tr>
               </thead>
+
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={7} className="p-8 text-center text-gray-500">Memuat...</td></tr>
+                  <tr><td colSpan={6} className="p-8 text-center text-gray-500">Memuat...</td></tr>
                 ) : orders.length === 0 ? (
-                  <tr><td colSpan={7} className="p-8 text-center text-gray-500">Belum ada data pesanan</td></tr>
+                  <tr><td colSpan={6} className="p-8 text-center text-gray-500">Belum ada data pesanan</td></tr>
+
                 ) : (
                   orders.map((row) => (
                     <tr key={`${row.order_source}-${row.order_id}`} className="border-t hover:bg-gray-50/80">
@@ -473,28 +467,8 @@ const AdminFinance = () => {
                         {formatRupiah(row.production_total + row.accommodation_cost)}
                       </td>
                       <td className="px-4 py-3 text-right font-medium">{formatRupiah(row.net_amount)}</td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center justify-center gap-1">
-                          <button
-                            type="button"
-                            onClick={() => openEdit(row)}
-                            className="p-2 rounded-lg text-primary-600 bg-primary-50 hover:bg-primary-100"
-                            title={row.financial_id ? 'Edit catatan' : 'Tambah / kelola catatan'}
-                          >
-                            <Edit size={16} />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDelete(row)}
-                            disabled={!row.financial_id}
-                            className="p-2 rounded-lg text-red-600 bg-red-50 hover:bg-red-100 disabled:opacity-40 disabled:cursor-not-allowed"
-                            title="Hapus catatan"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </div>
-                      </td>
                     </tr>
+
                   ))
                 )}
               </tbody>

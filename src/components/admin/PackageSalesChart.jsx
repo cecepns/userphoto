@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import {
   Bar,
   BarChart,
@@ -8,29 +8,13 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { formatRupiah } from '../../utils/formatters';
-
-const CHART_VIEWS = {
-  orders: {
-    key: 'order_count',
-    label: 'Jumlah Pesanan',
-    color: '#2f4274',
-    format: (value) => `${value} pesanan`,
-  },
-  revenue: {
-    key: 'total_revenue',
-    label: 'Total Pendapatan',
-    color: '#0ea5e9',
-    format: (value) => formatRupiah(value),
-  },
-};
 
 const truncateLabel = (label, max = 22) => {
   const text = String(label || '');
   return text.length > max ? `${text.slice(0, max)}…` : text;
 };
 
-const ChartTooltip = ({ active, payload, view }) => {
+const ChartTooltip = ({ active, payload }) => {
   if (!active || !payload?.length) return null;
 
   const item = payload[0]?.payload;
@@ -38,36 +22,41 @@ const ChartTooltip = ({ active, payload, view }) => {
 
   return (
     <div className="bg-white border border-gray-100 rounded-lg shadow-lg px-4 py-3 text-sm">
-      <p className="font-semibold text-gray-800 mb-2 max-w-[220px]">{item.package_name}</p>
-      <p className="text-gray-600">
-        <span className="font-medium text-gray-700">Pesanan:</span> {item.order_count}
+      <p className="font-semibold text-gray-800 mb-1.5 max-w-[220px]">{item.package_name}</p>
+      <p className="text-gray-600 text-xs mb-1">
+        <span className="font-medium text-gray-700">Peminat:</span> {item.popularity_percentage}%
       </p>
-      <p className="text-gray-600">
-        <span className="font-medium text-gray-700">Pendapatan:</span> {formatRupiah(item.total_revenue)}
-      </p>
-      <p className="text-xs text-primary-600 mt-2 pt-2 border-t border-gray-100">
-        {CHART_VIEWS[view].label}: {CHART_VIEWS[view].format(item[CHART_VIEWS[view].key])}
+      <p className="text-gray-500 text-[11px]">
+        <span className="font-medium">Total Pesanan:</span> {item.order_count}
       </p>
     </div>
   );
 };
 
 const PackageSalesChart = ({ data = [] }) => {
-  const [view, setView] = useState('orders');
-
   const chartData = useMemo(
     () =>
-      data.map((item) => ({
-        ...item,
-        package_name: item.package_name || 'Tanpa nama paket',
-        order_count: Number(item.order_count) || 0,
-        total_revenue: Number(item.total_revenue) || 0,
-        short_name: truncateLabel(item.package_name),
-      })),
+      data.map((item) => {
+        const count = Number(item.order_count) || 0;
+        let percentage = 0;
+        if (count > 0) {
+          if (count < 10) percentage = 10;
+          else if (count < 20) percentage = 20;
+          else if (count < 50) percentage = 50;
+          else if (count <= 100) percentage = 80;
+          else percentage = 100;
+        }
+        return {
+          ...item,
+          package_name: item.package_name || 'Tanpa nama paket',
+          order_count: count,
+          popularity_percentage: percentage,
+          short_name: truncateLabel(item.package_name),
+        };
+      }),
     [data],
   );
 
-  const activeView = CHART_VIEWS[view];
   const chartHeight = Math.max(280, chartData.length * 52 + 40);
 
   const yAxisWidth = useMemo(() => {
@@ -78,33 +67,8 @@ const PackageSalesChart = ({ data = [] }) => {
     return Math.min(160, Math.max(44, longest * 7 + 12));
   }, [chartData]);
 
-  const formatXAxis = (value) => {
-    if (view === 'revenue') {
-      if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}jt`;
-      if (value >= 1_000) return `${(value / 1_000).toFixed(0)}rb`;
-    }
-    return value;
-  };
-
   return (
     <div>
-      <div className="flex flex-wrap gap-2 mb-6">
-        {Object.entries(CHART_VIEWS).map(([key, config]) => (
-          <button
-            key={key}
-            type="button"
-            onClick={() => setView(key)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              view === key
-                ? 'bg-primary-500 text-white shadow-sm'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-            }`}
-          >
-            {config.label}
-          </button>
-        ))}
-      </div>
-
       <ResponsiveContainer width="100%" height={chartHeight} className="-ml-1">
         <BarChart
           data={chartData}
@@ -121,10 +85,11 @@ const PackageSalesChart = ({ data = [] }) => {
           <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e5e7eb" />
           <XAxis
             type="number"
+            domain={[0, 100]}
             tick={{ fill: '#6b7280', fontSize: 12 }}
             axisLine={{ stroke: '#e5e7eb' }}
             tickLine={false}
-            tickFormatter={formatXAxis}
+            tickFormatter={(val) => `${val}%`}
           />
           <YAxis
             type="category"
@@ -137,11 +102,11 @@ const PackageSalesChart = ({ data = [] }) => {
           />
           <Tooltip
             cursor={{ fill: 'rgba(47, 66, 116, 0.06)' }}
-            content={(props) => <ChartTooltip {...props} view={view} />}
+            content={(props) => <ChartTooltip {...props} />}
           />
           <Bar
-            dataKey={activeView.key}
-            fill={view === 'orders' ? 'url(#packageSalesGradient)' : activeView.color}
+            dataKey="popularity_percentage"
+            fill="url(#packageSalesGradient)"
             radius={[0, 6, 6, 0]}
             maxBarSize={28}
             animationDuration={600}

@@ -272,8 +272,44 @@ app.get('/api/admin/stats', authenticateAdmin, async (req, res) => {
     const [requestCount] = await db.execute('SELECT COUNT(*) as count FROM custom_requests');
     stats.customRequests = requestCount[0].count;
 
-    const [revenueResult] = await db.execute('SELECT SUM(total_amount) as total FROM orders WHERE status = "completed"');
-    stats.revenue = revenueResult[0].total || 0;
+    // 1. Get gross income from orders
+    const [orderIncome] = await db.execute(
+      "SELECT COALESCE(SUM(total_amount), 0) AS total FROM orders WHERE status IN ('confirmed','completed','pending')"
+    );
+    // 2. Get gross income from custom requests
+    const [customIncome] = await db.execute(
+      "SELECT COALESCE(SUM(booking_amount), 0) AS total FROM custom_requests WHERE status IN ('confirmed','completed','pending')"
+    );
+    const grossIncome = Number(orderIncome[0]?.total || 0) + Number(customIncome[0]?.total || 0);
+
+    // 3. Get default accommodation cost setting
+    const [settingsRows] = await db.execute(
+      'SELECT accommodation_cost FROM financial_settings WHERE id = 1 LIMIT 1'
+    );
+    const accommodationDefault = Number(settingsRows[0]?.accommodation_cost || 0);
+
+    // 4. Get total production cost
+    const [prodRows] = await db.execute(
+      "SELECT COALESCE(SUM(amount), 0) AS total FROM production_cost_items"
+    );
+    const productionTotal = Number(prodRows[0]?.total || 0);
+
+    // 5. Get total accommodation cost
+    const [accomRows] = await db.execute(
+      `SELECT COALESCE(SUM(
+         CASE 
+           WHEN accommodation_cost IS NOT NULL AND accommodation_cost >= 0 THEN accommodation_cost
+           WHEN accommodation_applied = 1 THEN ?
+           ELSE 0
+         END
+       ), 0) AS total FROM order_financials`,
+      [accommodationDefault]
+    );
+    const accommodationTotal = Number(accomRows[0]?.total || 0);
+
+    // 6. Net Income
+    stats.revenue = grossIncome - productionTotal - accommodationTotal;
+
 
     res.json(stats);
   } catch (error) {
@@ -3069,14 +3105,27 @@ app.delete('/api/contact-messages/:id', authenticateAdmin, async (req, res) => {
 app.get('/api/admin/package-sales', authenticateAdmin, async (req, res) => {
   try {
     const [rows] = await db.execute(
-      `SELECT COALESCE(NULLIF(TRIM(service_name), ''), 'Tanpa nama paket') AS package_name,
-              COUNT(*) AS order_count,
-              COALESCE(SUM(total_amount), 0) AS total_revenue
-       FROM orders
-       WHERE status IN ('pending', 'confirmed', 'completed')
+      `SELECT package_name, CAST(SUM(order_count) AS UNSIGNED) AS order_count
+       FROM (
+         SELECT s.name AS package_name,
+                COUNT(o.id) AS order_count
+         FROM services s
+         LEFT JOIN orders o ON o.service_id = s.id AND o.status IN ('pending', 'confirmed', 'completed')
+         GROUP BY s.id, s.name
+         
+         UNION ALL
+         
+         SELECT o.service_name AS package_name,
+                COUNT(o.id) AS order_count
+         FROM orders o
+         WHERE o.status IN ('pending', 'confirmed', 'completed')
+           AND (o.service_id IS NULL OR o.service_id NOT IN (SELECT id FROM services))
+         GROUP BY o.service_name
+       ) AS combined
        GROUP BY package_name
-       ORDER BY order_count DESC, total_revenue DESC`
+       ORDER BY order_count DESC`
     );
+
     res.json({ success: true, data: rows });
   } catch (error) {
     console.error('Package sales error:', error);
