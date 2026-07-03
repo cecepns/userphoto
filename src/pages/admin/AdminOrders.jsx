@@ -1234,15 +1234,17 @@ const AdminOrders = () => {
 
         {/* Year Calendar Picker */}
         <div className="mb-6 bg-white rounded-xl shadow-lg p-6 border border-gray-100">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
-              Kalender Tahunan ({activeYear})
-              <span className="inline-block text-xs font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-lg font-semibold text-gray-800">
+                Kalender Tahunan ({activeYear})
+              </h2>
+              <span className="inline-block text-xs font-bold px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 border border-blue-100 whitespace-nowrap">
                 Total: {yearlyTotalOrders} Client
               </span>
-            </h2>
+            </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 self-end sm:self-auto">
               <button
                 type="button"
                 onClick={() => setActiveYear(prev => prev - 1)}
