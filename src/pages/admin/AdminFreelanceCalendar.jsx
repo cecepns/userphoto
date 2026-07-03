@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { Helmet } from 'react-helmet-async';
 import AsyncSelect from 'react-select/async';
-import { ChevronLeft, ChevronRight, Edit, Trash2, Plus, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Edit, Trash2, Plus, X, Download, Copy } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
+import jsPDF from 'jspdf';
+
 import AdminLayout from '../../components/AdminLayout';
 import { formatDate } from '../../utils/formatters';
 import { API_ENDPOINTS } from '../../utils/endpoints';
@@ -83,6 +85,100 @@ const AdminFreelanceCalendar = () => {
     });
     setSelectedDateKey(null);
   };
+
+  const handleDownloadPdf = async (detailAcaraId) => {
+    try {
+      const data = await apiGet(`/api/detail-acara/${detailAcaraId}`);
+      if (!data) {
+        toast.error("Gagal memuat detail acara");
+        return;
+      }
+      
+      const doc = new jsPDF();
+      let y = 20;
+      doc.setFontSize(16);
+      doc.text('Detail Acara', 105, y, { align: 'center' });
+      y += 12;
+      doc.setFontSize(10);
+      const lines = [
+        `Nama Client: ${data.client_name || '-'}`,
+        `Telepon: ${data.client_phone || '-'}`,
+        `Alamat: ${data.client_address || '-'}`,
+        `Pasangan: ${data.bride_name || '-'} & ${data.groom_name || '-'}`,
+        `Tanggal Acara: ${data.wedding_date ? formatDate(data.wedding_date) : '-'}`,
+        `Paket: ${data.package_name || '-'}`,
+      ];
+      lines.forEach((line) => { doc.text(line, 20, y); y += 7; });
+      y += 5;
+      
+      const maps = Array.isArray(data.maps) && data.maps.length ? data.maps : [
+        { url: data.map1_url || '', note: data.map1_note || '' },
+        { url: data.map2_url || '', note: data.map2_note || '' },
+        { url: data.map3_url || '', note: data.map3_note || '' },
+        { url: data.map4_url || '', note: data.map4_note || '' },
+      ].filter((m) => m.url || m.note);
+
+      maps.forEach((m, index) => {
+        if (!m.url && !m.note) return;
+        doc.setFont('helvetica', 'bold');
+        doc.text(`Lokasi ${index + 1}:`, 20, y);
+        y += 6;
+        doc.setFont('helvetica', 'normal');
+        if (m.url) { doc.text(`Maps: ${m.url}`, 20, y); y += 6; }
+        if (m.note) { doc.text(`Catatan: ${m.note}`, 20, y); y += 6; }
+      });
+      
+      if (data.notes) {
+        doc.text(`Catatan umum: ${data.notes}`, 20, y);
+      }
+      doc.save(`detail-acara-${data.id}.pdf`);
+      toast.success("PDF Detail Acara berhasil diunduh");
+    } catch (err) {
+      toast.error("Gagal mengunduh PDF");
+    }
+  };
+
+  const handleCopyTextFromId = async (detailAcaraId) => {
+    try {
+      const data = await apiGet(`/api/detail-acara/${detailAcaraId}`);
+      if (!data) {
+        toast.error("Gagal memuat detail acara");
+        return;
+      }
+      
+      const maps = Array.isArray(data.maps) && data.maps.length ? data.maps : [
+        { url: data.map1_url || '', note: data.map1_note || '' },
+        { url: data.map2_url || '', note: data.map2_note || '' },
+        { url: data.map3_url || '', note: data.map3_note || '' },
+        { url: data.map4_url || '', note: data.map4_note || '' },
+      ].filter((m) => m.url || m.note);
+
+      let text = `Nama Client: ${data.client_name || '-'}\n`;
+      text += `Telepon: ${data.client_phone || '-'}\n`;
+      text += `Alamat: ${data.client_address || '-'}\n`;
+      text += `Pasangan: ${data.bride_name || '-'} & ${data.groom_name || '-'}\n`;
+      text += `Tanggal Acara: ${data.wedding_date ? formatDate(data.wedding_date) : '-'}\n`;
+      text += `Paket: ${data.package_name || '-'}\n\n`;
+
+      maps.forEach((m, index) => {
+        if (!m.url && !m.note) return;
+        text += `Lokasi ${index + 1}:\n`;
+        if (m.url) text += `Maps: ${m.url}\n`;
+        if (m.note) text += `Catatan: ${m.note}\n`;
+        text += `\n`;
+      });
+
+      if (data.notes) {
+        text += `Catatan umum: ${data.notes}\n`;
+      }
+
+      navigator.clipboard.writeText(text.trim());
+      toast.success('Detail acara disalin ke clipboard');
+    } catch (err) {
+      toast.error("Gagal menyalin detail acara");
+    }
+  };
+
 
   const loadFreelancerOptions = async (inputValue) => {
     const data = await apiGet(
@@ -381,7 +477,27 @@ const AdminFreelanceCalendar = () => {
                           <p className="text-xs text-gray-600 mt-1 whitespace-pre-wrap">{ev.notes}</p>
                         ) : null}
                       </div>
-                      <div className="flex gap-1 shrink-0">
+                       <div className="flex gap-1.5 shrink-0 items-center">
+                        {ev.detail_acara_id ? (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => handleDownloadPdf(ev.detail_acara_id)}
+                              className="p-1.5 rounded-lg text-green-600 bg-green-50 hover:bg-green-100"
+                              title="Unduh PDF Acara"
+                            >
+                              <Download size={14} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleCopyTextFromId(ev.detail_acara_id)}
+                              className="p-1.5 rounded-lg text-blue-600 bg-blue-50 hover:bg-blue-100"
+                              title="Salin Detail (WA)"
+                            >
+                              <Copy size={14} />
+                            </button>
+                          </>
+                        ) : null}
                         <button
                           type="button"
                           onClick={() => openEdit(ev)}
@@ -399,6 +515,7 @@ const AdminFreelanceCalendar = () => {
                           <Trash2 size={14} />
                         </button>
                       </div>
+
                     </div>
                   </li>
                 ))}
@@ -436,23 +553,46 @@ const AdminFreelanceCalendar = () => {
                         {row.order_source === 'custom_request' ? `C${row.order_id}` : row.order_id}
                       </td>
                       <td className="py-2 pr-2">
-                        <div className="flex gap-1">
+                        <div className="flex gap-1.5 items-center">
+                          {row.detail_acara_id ? (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => handleDownloadPdf(row.detail_acara_id)}
+                                className="p-1.5 rounded-lg text-green-600 bg-green-50 hover:bg-green-100"
+                                title="Unduh PDF Acara"
+                              >
+                                <Download size={14} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleCopyTextFromId(row.detail_acara_id)}
+                                className="p-1.5 rounded-lg text-blue-600 bg-blue-50 hover:bg-blue-100"
+                                title="Salin Detail (WA)"
+                              >
+                                <Copy size={14} />
+                              </button>
+                            </>
+                          ) : null}
                           <button
                             type="button"
                             onClick={() => openEdit(row)}
-                            className="p-1.5 rounded text-[#2f4274] bg-[#2f4274]/10"
+                            className="p-1.5 rounded text-[#2f4274] bg-[#2f4274]/10 hover:bg-[#2f4274]/20"
+                            title="Edit"
                           >
                             <Edit size={14} />
                           </button>
                           <button
                             type="button"
                             onClick={() => handleDelete(row.id)}
-                            className="p-1.5 rounded text-red-600 bg-red-50"
+                            className="p-1.5 rounded text-red-600 bg-red-50 hover:bg-red-100"
+                            title="Hapus"
                           >
                             <Trash2 size={14} />
                           </button>
                         </div>
                       </td>
+
                     </tr>
                   ))
                 )}

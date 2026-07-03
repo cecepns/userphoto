@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Helmet } from 'react-helmet-async';
-import { Download, Plus, Edit, Trash2, X } from 'lucide-react';
+import { Download, Plus, Edit, Trash2, X, Copy } from 'lucide-react';
 import AsyncSelect from 'react-select/async';
 import toast from 'react-hot-toast';
 import jsPDF from 'jspdf';
@@ -189,6 +189,32 @@ const AdminDetailAcara = () => {
     }
     doc.save(`detail-acara-${row.id}.pdf`);
   };
+
+  const handleCopyText = (row) => {
+    const maps = mapsFromRow(row);
+    let text = `Nama Client: ${row.client_name || '-'}\n`;
+    text += `Telepon: ${row.client_phone || '-'}\n`;
+    text += `Alamat: ${row.client_address || '-'}\n`;
+    text += `Pasangan: ${row.bride_name || '-'} & ${row.groom_name || '-'}\n`;
+    text += `Tanggal Acara: ${row.wedding_date ? formatDate(row.wedding_date) : '-'}\n`;
+    text += `Paket: ${row.package_name || '-'}\n\n`;
+
+    maps.forEach((m, index) => {
+      if (!m.url && !m.note) return;
+      text += `Lokasi ${index + 1}:\n`;
+      if (m.url) text += `Maps: ${m.url}\n`;
+      if (m.note) text += `Catatan: ${m.note}\n`;
+      text += `\n`;
+    });
+
+    if (row.notes) {
+      text += `Catatan umum: ${row.notes}\n`;
+    }
+
+    navigator.clipboard.writeText(text.trim());
+    toast.success('Detail acara disalin ke clipboard');
+  };
+
 
   const handleDelete = async (id) => {
     if (!window.confirm('Hapus detail acara?')) return;
@@ -429,10 +455,12 @@ const AdminDetailAcara = () => {
                   <td className="px-4 py-3">{row.bride_name} & {row.groom_name}</td>
                   <td className="px-4 py-3">{row.wedding_date ? formatDate(row.wedding_date) : '-'}</td>
                   <td className="px-4 py-3 flex gap-2">
-                    <button type="button" onClick={() => generatePdf(row)} className="text-green-600" title="PDF"><Download size={18} /></button>
-                    <button type="button" onClick={() => openEdit(row)} className="text-primary-600"><Edit size={18} /></button>
-                    <button type="button" onClick={() => handleDelete(row.id)} className="text-red-600"><Trash2 size={18} /></button>
+                    <button type="button" onClick={() => generatePdf(row)} className="text-green-600 hover:text-green-700" title="Unduh PDF Acara"><Download size={18} /></button>
+                    <button type="button" onClick={() => handleCopyText(row)} className="text-blue-600 hover:text-blue-700" title="Salin Detail (WA)"><Copy size={18} /></button>
+                    <button type="button" onClick={() => openEdit(row)} className="text-primary-600 hover:text-primary-700"><Edit size={18} /></button>
+                    <button type="button" onClick={() => handleDelete(row.id)} className="text-red-600 hover:text-red-700"><Trash2 size={18} /></button>
                   </td>
+
                 </tr>
               ))}
             </tbody>

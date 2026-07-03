@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { ChevronLeft, ChevronRight, X, Calendar, Download } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X, Calendar, Download, Copy } from 'lucide-react';
 import toast from 'react-hot-toast';
 import jsPDF from 'jspdf';
 import FreelancerLayout from '../../components/FreelancerLayout';
@@ -113,6 +113,48 @@ const FreelancerCalendar = () => {
       toast.error("Gagal mengunduh PDF");
     }
   };
+
+  const handleCopyTextFromId = async (detailAcaraId) => {
+    try {
+      const data = await freelancerGet(`/api/detail-acara/${detailAcaraId}`);
+      if (!data) {
+        toast.error("Gagal memuat detail acara");
+        return;
+      }
+      
+      const maps = Array.isArray(data.maps) && data.maps.length ? data.maps : [
+        { url: data.map1_url || '', note: data.map1_note || '' },
+        { url: data.map2_url || '', note: data.map2_note || '' },
+        { url: data.map3_url || '', note: data.map3_note || '' },
+        { url: data.map4_url || '', note: data.map4_note || '' },
+      ].filter((m) => m.url || m.note);
+
+      let text = `Nama Client: ${data.client_name || '-'}\n`;
+      text += `Telepon: ${data.client_phone || '-'}\n`;
+      text += `Alamat: ${data.client_address || '-'}\n`;
+      text += `Pasangan: ${data.bride_name || '-'} & ${data.groom_name || '-'}\n`;
+      text += `Tanggal Acara: ${data.wedding_date ? formatDate(data.wedding_date) : '-'}\n`;
+      text += `Paket: ${data.package_name || '-'}\n\n`;
+
+      maps.forEach((m, index) => {
+        if (!m.url && !m.note) return;
+        text += `Lokasi ${index + 1}:\n`;
+        if (m.url) text += `Maps: ${m.url}\n`;
+        if (m.note) text += `Catatan: ${m.note}\n`;
+        text += `\n`;
+      });
+
+      if (data.notes) {
+        text += `Catatan umum: ${data.notes}\n`;
+      }
+
+      navigator.clipboard.writeText(text.trim());
+      toast.success('Detail acara disalin ke clipboard');
+    } catch (err) {
+      toast.error("Gagal menyalin detail acara");
+    }
+  };
+
 
   const days = getCalendarDays(calendarMonth);
   const selectedDayEvents = selectedDateKey ? eventsByDate[selectedDateKey] || [] : [];
@@ -230,15 +272,24 @@ const FreelancerCalendar = () => {
                     {ev.notes ? (
                       <p className="text-xs text-gray-600 mt-2 whitespace-pre-wrap border-t pt-2">{ev.notes}</p>
                     ) : null}
-                    <div className="mt-3">
+                    <div className="mt-3 pt-3 border-t border-gray-100 flex flex-wrap gap-2 items-center justify-between">
                       {ev.detail_acara_id ? (
-                        <button
-                          type="button"
-                          onClick={() => handleDownloadPdf(ev.detail_acara_id)}
-                          className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-primary-600 hover:bg-primary-700 text-white rounded text-xs font-semibold"
-                        >
-                          <Download size={13} /> Unduh PDF Acara
-                        </button>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleDownloadPdf(ev.detail_acara_id)}
+                            className="inline-flex items-center gap-1 text-xs font-semibold text-primary-600 hover:text-primary-700 bg-primary-50 hover:bg-primary-100 px-3 py-1.5 rounded-lg transition-colors"
+                          >
+                            <Download size={13} /> Unduh PDF Acara
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleCopyTextFromId(ev.detail_acara_id)}
+                            className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-colors"
+                          >
+                            <Copy size={13} /> Salin Detail (WA)
+                          </button>
+                        </div>
                       ) : (
                         <span className="inline-block px-2 py-0.5 bg-yellow-100 text-yellow-800 text-[10px] font-bold rounded-full">
                           📌 Tanda Penugasan (Detail belum diisi)
@@ -261,12 +312,13 @@ const FreelancerCalendar = () => {
                   <th className="py-2 pr-2">Tanggal</th>
                   <th className="py-2 pr-2">Klien / Pesanan</th>
                   <th className="py-2 pr-2">Catatan</th>
+                  <th className="py-2 pr-2 w-24">Aksi</th>
                 </tr>
               </thead>
               <tbody>
                 {assignments.length === 0 ? (
                   <tr>
-                    <td colSpan={3} className="py-8 text-center text-gray-500">
+                    <td colSpan={4} className="py-8 text-center text-gray-500">
                       Belum ada penugasan untuk Anda bulan ini
                     </td>
                   </tr>
@@ -284,7 +336,32 @@ const FreelancerCalendar = () => {
                         {row.order_source === 'custom_request' ? `C${row.order_id}` : row.order_id}
                       </td>
                       <td className="py-2 pr-2 text-gray-600">{row.notes || '-'}</td>
+                      <td className="py-2 pr-2">
+                        {row.detail_acara_id ? (
+                          <div className="flex gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => handleDownloadPdf(row.detail_acara_id)}
+                              className="p-1.5 rounded text-green-600 bg-green-50 hover:bg-green-100"
+                              title="Unduh PDF Acara"
+                            >
+                              <Download size={14} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleCopyTextFromId(row.detail_acara_id)}
+                              className="p-1.5 rounded text-blue-600 bg-blue-50 hover:bg-blue-100"
+                              title="Salin Detail (WA)"
+                            >
+                              <Copy size={14} />
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="text-[10px] text-gray-400 font-medium italic">Belum diisi</span>
+                        )}
+                      </td>
                     </tr>
+
                   ))
                 )}
               </tbody>
