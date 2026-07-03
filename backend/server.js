@@ -3110,14 +3110,15 @@ app.get('/api/admin/finance/summary', authenticateAdmin, async (req, res) => {
 
     const [orderIncome] = await db.execute(
       `SELECT COALESCE(SUM(total_amount), 0) AS total
-       FROM orders WHERE status IN ('confirmed','completed') AND ${dateFilterOrders}`,
+       FROM orders WHERE status IN ('confirmed','completed','pending') AND ${dateFilterOrders}`,
       paramsOrders
     );
     const [customIncome] = await db.execute(
       `SELECT COALESCE(SUM(booking_amount), 0) AS total
-       FROM custom_requests WHERE status IN ('confirmed','completed') AND ${dateFilterCustom}`,
+       FROM custom_requests WHERE status IN ('confirmed','completed','pending') AND ${dateFilterCustom}`,
       paramsCustom
     );
+
 
     const grossIncome =
       Number(orderIncome[0]?.total || 0) + Number(customIncome[0]?.total || 0);

@@ -349,61 +349,65 @@ const AdminFinance = () => {
         </div>
 
         {/* Clickable Stat Summary Cards */}
-        {summary && (
-          <div className="grid md:grid-cols-4 gap-4 mb-8">
-            <button
-              onClick={() => setActivePanel('masuk')}
-              type="button"
-              className="bg-gradient-to-br from-green-500 to-emerald-600 text-white rounded-xl shadow-lg p-5 hover:scale-[1.02] hover:shadow-xl transition-all duration-200 text-left group"
-            >
-              <div className="flex justify-between items-center">
-                <p className="text-sm text-green-100 font-medium">Uang Masuk</p>
-                <Landmark size={20} className="text-white" />
-              </div>
-              <p className="text-2xl font-bold mt-1">{formatRupiah(summary.grossIncome)}</p>
-              <p className="text-xs text-green-100/80 mt-2 group-hover:text-white transition-colors">Klik untuk cari &amp; rincian →</p>
-            </button>
+        {summary && (() => {
+          const periodText = period === 'monthly' ? `${MONTH_NAMES[month - 1]} ${year}` : `${year}`;
+          return (
+            <div className="grid md:grid-cols-4 gap-4 mb-8">
+              <button
+                onClick={() => setActivePanel('masuk')}
+                type="button"
+                className="bg-gradient-to-br from-green-500 to-emerald-600 text-white rounded-xl shadow-lg p-5 hover:scale-[1.02] hover:shadow-xl transition-all duration-200 text-left group"
+              >
+                <div className="flex justify-between items-center">
+                  <p className="text-sm text-green-100 font-medium">Uang Masuk ({periodText})</p>
+                  <Landmark size={20} className="text-white" />
+                </div>
+                <p className="text-2xl font-bold mt-1">{formatRupiah(summary.grossIncome)}</p>
+                <p className="text-xs text-green-100/80 mt-2 group-hover:text-white transition-colors">Klik untuk cari &amp; rincian →</p>
+              </button>
 
-            <button
-              onClick={() => setActivePanel('produksi')}
-              type="button"
-              className="bg-gradient-to-br from-orange-500 to-amber-600 text-white rounded-xl shadow-lg p-5 hover:scale-[1.02] hover:shadow-xl transition-all duration-200 text-left group"
-            >
-              <div className="flex justify-between items-center">
-                <p className="text-sm text-orange-100 font-medium">Biaya Produksi</p>
-                <Coins size={20} className="text-white" />
-              </div>
-              <p className="text-2xl font-bold mt-1">{formatRupiah(summary.productionTotal)}</p>
-              <p className="text-xs text-orange-100/80 mt-2 group-hover:text-white transition-colors">Klik untuk kelola &amp; tambah →</p>
-            </button>
+              <button
+                onClick={() => setActivePanel('produksi')}
+                type="button"
+                className="bg-gradient-to-br from-orange-500 to-amber-600 text-white rounded-xl shadow-lg p-5 hover:scale-[1.02] hover:shadow-xl transition-all duration-200 text-left group"
+              >
+                <div className="flex justify-between items-center">
+                  <p className="text-sm text-orange-100 font-medium">Biaya Produksi ({periodText})</p>
+                  <Coins size={20} className="text-white" />
+                </div>
+                <p className="text-2xl font-bold mt-1">{formatRupiah(summary.productionTotal)}</p>
+                <p className="text-xs text-orange-100/80 mt-2 group-hover:text-white transition-colors">Klik untuk kelola &amp; tambah →</p>
+              </button>
 
-            <button
-              onClick={() => setActivePanel('akomodasi')}
-              type="button"
-              className="bg-gradient-to-br from-yellow-500 to-amber-500 text-white rounded-xl shadow-lg p-5 hover:scale-[1.02] hover:shadow-xl transition-all duration-200 text-left group"
-            >
-              <div className="flex justify-between items-center">
-                <p className="text-sm text-yellow-100 font-medium">Akomodasi</p>
-                <Truck size={20} className="text-white" />
-              </div>
-              <p className="text-2xl font-bold mt-1">{formatRupiah(summary.accommodationTotal)}</p>
-              <p className="text-xs text-yellow-100/80 mt-2 group-hover:text-white transition-colors">Klik untuk rincian petugas →</p>
-            </button>
+              <button
+                onClick={() => setActivePanel('akomodasi')}
+                type="button"
+                className="bg-gradient-to-br from-yellow-500 to-amber-500 text-white rounded-xl shadow-lg p-5 hover:scale-[1.02] hover:shadow-xl transition-all duration-200 text-left group"
+              >
+                <div className="flex justify-between items-center">
+                  <p className="text-sm text-yellow-100 font-medium">Akomodasi ({periodText})</p>
+                  <Truck size={20} className="text-white" />
+                </div>
+                <p className="text-2xl font-bold mt-1">{formatRupiah(summary.accommodationTotal)}</p>
+                <p className="text-xs text-yellow-100/80 mt-2 group-hover:text-white transition-colors">Klik untuk rincian petugas →</p>
+              </button>
 
-            <button
-              onClick={() => setActivePanel('bersih')}
-              type="button"
-              className="bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-xl shadow-lg p-5 hover:scale-[1.02] hover:shadow-xl transition-all duration-200 text-left group"
-            >
-              <div className="flex justify-between items-center">
-                <p className="text-sm text-blue-100 font-medium">Bersih</p>
-                <DollarSign size={20} className="text-white" />
-              </div>
-              <p className="text-2xl font-bold mt-1">{formatRupiah(summary.netIncome)}</p>
-              <p className="text-xs text-blue-100/80 mt-2 group-hover:text-white transition-colors">Klik untuk rincian laba →</p>
-            </button>
-          </div>
-        )}
+              <button
+                onClick={() => setActivePanel('bersih')}
+                type="button"
+                className="bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-xl shadow-lg p-5 hover:scale-[1.02] hover:shadow-xl transition-all duration-200 text-left group"
+              >
+                <div className="flex justify-between items-center">
+                  <p className="text-sm text-blue-100 font-medium">Bersih ({periodText})</p>
+                  <DollarSign size={20} className="text-white" />
+                </div>
+                <p className="text-2xl font-bold mt-1">{formatRupiah(summary.netIncome)}</p>
+                <p className="text-xs text-blue-100/80 mt-2 group-hover:text-white transition-colors">Klik untuk rincian laba →</p>
+              </button>
+            </div>
+          );
+        })()}
+
 
 
         {/* Toggle Button for Table */}
