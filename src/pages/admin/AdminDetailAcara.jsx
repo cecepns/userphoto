@@ -160,35 +160,105 @@ const AdminDetailAcara = () => {
   const generatePdf = (row) => {
     const maps = mapsFromRow(row);
     const doc = new jsPDF();
-    let y = 20;
-    doc.setFontSize(16);
-    doc.text('Detail Acara', 105, y, { align: 'center' });
-    y += 12;
+    
+    // Title
+    doc.setFontSize(18);
+    doc.setFont("helvetica", "bold");
+    doc.text("DETAIL ACARA", 105, 20, { align: "center" });
+
+    // Company Name
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text("Chekusphoto", 20, 32);
+
+    // Divider Line
+    doc.setLineWidth(0.5);
+    doc.line(20, 36, 190, 36);
+
+    // Client Info Header
+    let y = 46;
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text("Data Client:", 20, y);
+    y += 8;
+
     doc.setFontSize(10);
-    const lines = [
-      `Nama Client: ${row.client_name || '-'}`,
-      `Telepon: ${row.client_phone || '-'}`,
-      `Alamat: ${row.client_address || '-'}`,
-      `Pasangan: ${row.bride_name || '-'} & ${row.groom_name || '-'}`,
-      `Tanggal Acara: ${row.wedding_date ? formatDate(row.wedding_date) : '-'}`,
-      `Paket: ${row.package_name || '-'}`,
-    ];
-    lines.forEach((line) => { doc.text(line, 20, y); y += 7; });
-    y += 5;
+    doc.setFont("helvetica", "normal");
+    
+    doc.text(`Nama Client: ${row.client_name || '-'}`, 20, y);
+    y += 6;
+    doc.text(`Telepon: ${row.client_phone || '-'}`, 20, y);
+    y += 6;
+    doc.text(`Pasangan: ${row.bride_name || '-'} & ${row.groom_name || '-'}`, 20, y);
+    y += 6;
+    doc.text(`Tanggal Acara: ${row.wedding_date ? formatDate(row.wedding_date) : '-'}`, 20, y);
+    y += 6;
+    doc.text(`Paket: ${row.package_name || '-'}`, 20, y);
+    y += 8;
+
+    const addressLines = row.client_address
+      ? doc.splitTextToSize(`Alamat: ${row.client_address}`, 170)
+      : [];
+    if (addressLines.length > 0) {
+      doc.text(addressLines, 20, y);
+      y += addressLines.length * 5 + 4;
+    }
+
+    // Divider Line
+    doc.setLineWidth(0.2);
+    doc.line(20, y, 190, y);
+    y += 8;
+
+    // Locations Info Header
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text("Lokasi Acara:", 20, y);
+    y += 8;
+
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+
     maps.forEach((m, index) => {
       if (!m.url && !m.note) return;
+      if (y > 270) {
+        doc.addPage();
+        y = 20;
+      }
       doc.setFont('helvetica', 'bold');
       doc.text(`Lokasi ${index + 1}:`, 20, y);
       y += 6;
       doc.setFont('helvetica', 'normal');
-      if (m.url) { doc.text(`Maps: ${m.url}`, 20, y); y += 6; }
-      if (m.note) { doc.text(`Catatan: ${m.note}`, 20, y); y += 6; }
+      if (m.url) { 
+        const urlLines = doc.splitTextToSize(`Maps: ${m.url}`, 170);
+        doc.text(urlLines, 20, y); 
+        y += urlLines.length * 5; 
+      }
+      if (m.note) { 
+        const noteLines = doc.splitTextToSize(`Catatan: ${m.note}`, 170);
+        doc.text(noteLines, 20, y); 
+        y += noteLines.length * 5; 
+      }
+      y += 2;
     });
+
     if (row.notes) {
-      doc.text(`Catatan umum: ${row.notes}`, 20, y);
+      y += 4;
+      if (y > 270) {
+        doc.addPage();
+        y = 20;
+      }
+      doc.setFont('helvetica', 'bold');
+      doc.text("Catatan Umum:", 20, y);
+      y += 6;
+      doc.setFont('helvetica', 'normal');
+      const notesLines = doc.splitTextToSize(row.notes, 170);
+      doc.text(notesLines, 20, y);
+      y += notesLines.length * 5;
     }
+
     doc.save(`detail-acara-${row.id}.pdf`);
   };
+
 
   const handleCopyText = (row) => {
     const maps = mapsFromRow(row);

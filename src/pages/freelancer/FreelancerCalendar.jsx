@@ -71,22 +71,64 @@ const FreelancerCalendar = () => {
       }
       
       const doc = new jsPDF();
-      let y = 20;
-      doc.setFontSize(16);
-      doc.text('Detail Acara', 105, y, { align: 'center' });
-      y += 12;
-      doc.setFontSize(10);
-      const lines = [
-        `Nama Client: ${data.client_name || '-'}`,
-        `Telepon: ${data.client_phone || '-'}`,
-        `Alamat: ${data.client_address || '-'}`,
-        `Pasangan: ${data.bride_name || '-'} & ${data.groom_name || '-'}`,
-        `Tanggal Acara: ${data.wedding_date ? formatDate(data.wedding_date) : '-'}`,
-        `Paket: ${data.package_name || '-'}`,
-      ];
-      lines.forEach((line) => { doc.text(line, 20, y); y += 7; });
-      y += 5;
       
+      // Title
+      doc.setFontSize(18);
+      doc.setFont("helvetica", "bold");
+      doc.text("DETAIL ACARA", 105, 20, { align: "center" });
+
+      // Company Name
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "bold");
+      doc.text("Chekusphoto", 20, 32);
+
+      // Divider Line
+      doc.setLineWidth(0.5);
+      doc.line(20, 36, 190, 36);
+
+      // Client Info Header
+      let y = 46;
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "bold");
+      doc.text("Data Client:", 20, y);
+      y += 8;
+
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      
+      doc.text(`Nama Client: ${data.client_name || '-'}`, 20, y);
+      y += 6;
+      doc.text(`Telepon: ${data.client_phone || '-'}`, 20, y);
+      y += 6;
+      doc.text(`Pasangan: ${data.bride_name || '-'} & ${data.groom_name || '-'}`, 20, y);
+      y += 6;
+      doc.text(`Tanggal Acara: ${data.wedding_date ? formatDate(data.wedding_date) : '-'}`, 20, y);
+      y += 6;
+      doc.text(`Paket: ${data.package_name || '-'}`, 20, y);
+      y += 8;
+
+      const addressLines = data.client_address
+        ? doc.splitTextToSize(`Alamat: ${data.client_address}`, 170)
+        : [];
+      if (addressLines.length > 0) {
+        doc.text(addressLines, 20, y);
+        y += addressLines.length * 5 + 4;
+      }
+
+      // Divider Line
+      doc.setLineWidth(0.2);
+      doc.line(20, y, 190, y);
+      y += 8;
+
+      // Locations Info Header
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "bold");
+      doc.text("Lokasi Acara:", 20, y);
+      y += 8;
+
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+
       const maps = Array.isArray(data.maps) && data.maps.length ? data.maps : [
         { url: data.map1_url || '', note: data.map1_note || '' },
         { url: data.map2_url || '', note: data.map2_note || '' },
@@ -96,23 +138,49 @@ const FreelancerCalendar = () => {
 
       maps.forEach((m, index) => {
         if (!m.url && !m.note) return;
+        if (y > 270) {
+          doc.addPage();
+          y = 20;
+        }
         doc.setFont('helvetica', 'bold');
         doc.text(`Lokasi ${index + 1}:`, 20, y);
         y += 6;
         doc.setFont('helvetica', 'normal');
-        if (m.url) { doc.text(`Maps: ${m.url}`, 20, y); y += 6; }
-        if (m.note) { doc.text(`Catatan: ${m.note}`, 20, y); y += 6; }
+        if (m.url) { 
+          const urlLines = doc.splitTextToSize(`Maps: ${m.url}`, 170);
+          doc.text(urlLines, 20, y); 
+          y += urlLines.length * 5; 
+        }
+        if (m.note) { 
+          const noteLines = doc.splitTextToSize(`Catatan: ${m.note}`, 170);
+          doc.text(noteLines, 20, y); 
+          y += noteLines.length * 5; 
+        }
+        y += 2;
       });
-      
+
       if (data.notes) {
-        doc.text(`Catatan umum: ${data.notes}`, 20, y);
+        y += 4;
+        if (y > 270) {
+          doc.addPage();
+          y = 20;
+        }
+        doc.setFont('helvetica', 'bold');
+        doc.text("Catatan Umum:", 20, y);
+        y += 6;
+        doc.setFont('helvetica', 'normal');
+        const notesLines = doc.splitTextToSize(data.notes, 170);
+        doc.text(notesLines, 20, y);
+        y += notesLines.length * 5;
       }
+
       doc.save(`detail-acara-${data.id}.pdf`);
       toast.success("PDF Detail Acara berhasil diunduh");
     } catch (err) {
       toast.error("Gagal mengunduh PDF");
     }
   };
+
 
   const handleCopyTextFromId = async (detailAcaraId) => {
     try {
