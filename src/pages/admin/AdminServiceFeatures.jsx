@@ -24,7 +24,7 @@ const AdminServiceFeatures = () => {
     try {
       const token = localStorage.getItem("adminToken");
       const response = await fetch(
-        "https://api.kingcreativestudio.my.id/chekusphoto/api/service-features",
+        "https://api.kingcreativestudio.my.id/user-photo/api/service-features",
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -52,8 +52,8 @@ const AdminServiceFeatures = () => {
     try {
       const token = localStorage.getItem("adminToken");
       const url = editingFeature
-        ? `https://api.kingcreativestudio.my.id/chekusphoto/api/service-features/${editingFeature.id}`
-        : "https://api.kingcreativestudio.my.id/chekusphoto/api/service-features";
+        ? `https://api.kingcreativestudio.my.id/user-photo/api/service-features/${editingFeature.id}`
+        : "https://api.kingcreativestudio.my.id/user-photo/api/service-features";
 
       const method = editingFeature ? "PUT" : "POST";
       const body = editingFeature ? { ...formData, is_active: true } : formData;
@@ -107,7 +107,7 @@ const AdminServiceFeatures = () => {
     try {
       const token = localStorage.getItem("adminToken");
       const response = await fetch(
-        `https://api.kingcreativestudio.my.id/chekusphoto/api/service-features/${id}`,
+        `https://api.kingcreativestudio.my.id/user-photo/api/service-features/${id}`,
         {
           method: "DELETE",
           headers: {

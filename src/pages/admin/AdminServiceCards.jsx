@@ -27,7 +27,7 @@ const AdminServiceCards = () => {
 
   const fetchCards = async () => {
     try {
-      const response = await fetch('https://api.kingcreativestudio.my.id/chekusphoto/api/service-cards', {
+      const response = await fetch('https://api.kingcreativestudio.my.id/user-photo/api/service-cards', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('admin_token')}`
         }
@@ -47,8 +47,8 @@ const AdminServiceCards = () => {
     
     try {
       const url = editingCard 
-        ? `https://api.kingcreativestudio.my.id/chekusphoto/api/service-cards/${editingCard.id}`
-        : 'https://api.kingcreativestudio.my.id/chekusphoto/api/service-cards';
+        ? `https://api.kingcreativestudio.my.id/user-photo/api/service-cards/${editingCard.id}`
+        : 'https://api.kingcreativestudio.my.id/user-photo/api/service-cards';
       
       const method = editingCard ? 'PUT' : 'POST';
       
@@ -97,7 +97,7 @@ const AdminServiceCards = () => {
     if (!confirm('Apakah Anda yakin ingin menghapus card ini?')) return;
 
     try {
-      const response = await fetch(`https://api.kingcreativestudio.my.id/chekusphoto/api/service-cards/${id}`, {
+      const response = await fetch(`https://api.kingcreativestudio.my.id/user-photo/api/service-cards/${id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('admin_token')}`

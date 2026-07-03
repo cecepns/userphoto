@@ -24,7 +24,7 @@ const AdminContactMessages = () => {
   const fetchMessages = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`https://api.kingcreativestudio.my.id/chekusphoto/api/contact-messages?page=${pagination.page}&limit=${pagination.limit}`, {
+      const response = await fetch(`https://api.kingcreativestudio.my.id/user-photo/api/contact-messages?page=${pagination.page}&limit=${pagination.limit}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('admin_token')}`
         }
@@ -68,7 +68,7 @@ const AdminContactMessages = () => {
     }
 
     try {
-      const response = await fetch(`https://api.kingcreativestudio.my.id/chekusphoto/api/contact-messages/${messageId}`, {
+      const response = await fetch(`https://api.kingcreativestudio.my.id/user-photo/api/contact-messages/${messageId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('admin_token')}`

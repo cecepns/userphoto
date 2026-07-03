@@ -12,7 +12,7 @@ const Contact = () => {
     const loadHero = async () => {
       try {
         const response = await fetch(
-          'https://api.kingcreativestudio.my.id/chekusphoto/api/content-sections/contact_hero_section'
+          'https://api.kingcreativestudio.my.id/user-photo/api/content-sections/contact_hero_section'
         );
         if (!response.ok) return;
         const data = await response.json();
@@ -47,7 +47,7 @@ const Contact = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch('https://api.kingcreativestudio.my.id/chekusphoto/api/contact', {
+      const response = await fetch('https://api.kingcreativestudio.my.id/user-photo/api/contact', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

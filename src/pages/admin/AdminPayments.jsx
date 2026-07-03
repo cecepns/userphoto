@@ -14,7 +14,7 @@ const AdminPayments = () => {
 
   const fetchPaymentMethods = async () => {
     try {
-      const response = await fetch('https://api.kingcreativestudio.my.id/chekusphoto/api/payment-methods');
+      const response = await fetch('https://api.kingcreativestudio.my.id/user-photo/api/payment-methods');
       const data = await response.json();
       setPaymentMethods(data);
     } catch (error) {
@@ -25,8 +25,8 @@ const AdminPayments = () => {
   const handleSubmit = async (methodData) => {
     try {
       const url = editingMethod 
-        ? `https://api.kingcreativestudio.my.id/chekusphoto/api/payment-methods/${editingMethod.id}`
-        : 'https://api.kingcreativestudio.my.id/chekusphoto/api/payment-methods';
+        ? `https://api.kingcreativestudio.my.id/user-photo/api/payment-methods/${editingMethod.id}`
+        : 'https://api.kingcreativestudio.my.id/user-photo/api/payment-methods';
       
       const method = editingMethod ? 'PUT' : 'POST';
       
@@ -88,7 +88,7 @@ const AdminPayments = () => {
     if (!confirmed) return;
 
     try {
-      const response = await fetch(`https://api.kingcreativestudio.my.id/chekusphoto/api/payment-methods/${id}`, {
+      const response = await fetch(`https://api.kingcreativestudio.my.id/user-photo/api/payment-methods/${id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('admin_token')}`

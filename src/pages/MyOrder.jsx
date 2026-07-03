@@ -6,7 +6,7 @@ import { formatRupiah } from "../utils/formatters";
 import { imageUrl } from "../utils/imageUrl";
 import { formatPhotoStatus, formatVideoStatus } from "../constants/orderProgress";
 
-const API_BASE = "https://api.kingcreativestudio.my.id/chekusphoto/api";
+const API_BASE = "https://api.kingcreativestudio.my.id/user-photo/api";
 
 const toNumber = (value) => {
   const n = typeof value === "number" ? value : parseFloat(value);

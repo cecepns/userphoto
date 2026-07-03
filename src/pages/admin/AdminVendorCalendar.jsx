@@ -3,7 +3,7 @@ import { Helmet } from "react-helmet-async";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import AdminLayout from "../../components/AdminLayout";
 
-const API_BASE = "https://api.kingcreativestudio.my.id/chekusphoto/api";
+const API_BASE = "https://api.kingcreativestudio.my.id/user-photo/api";
 
 const VENDOR_COLOR_POOL = [
   "bg-green-600 text-white",

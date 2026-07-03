@@ -1,4 +1,4 @@
-export const API_BASE = 'https://api.kingcreativestudio.my.id/chekusphoto';
+export const API_BASE = 'https://api.kingcreativestudio.my.id/user-photo';
 
 export function imageUrl(value) {
   if (!value) return '';

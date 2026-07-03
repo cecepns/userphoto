@@ -15,21 +15,21 @@ const About = () => {
   const fetchAboutContent = async () => {
     try {
       // Fetch hero section content
-      const heroResponse = await fetch('https://api.kingcreativestudio.my.id/chekusphoto/api/content-sections/about_hero_section');
+      const heroResponse = await fetch('https://api.kingcreativestudio.my.id/user-photo/api/content-sections/about_hero_section');
       if (heroResponse.ok) {
         const heroData = await heroResponse.json();
         setHeroContent(heroData);
       }
 
       // Fetch mission section content
-      const missionResponse = await fetch('https://api.kingcreativestudio.my.id/chekusphoto/api/content-sections/about_mission_section');
+      const missionResponse = await fetch('https://api.kingcreativestudio.my.id/user-photo/api/content-sections/about_mission_section');
       if (missionResponse.ok) {
         const missionData = await missionResponse.json();
         setMissionContent(missionData);
       }
 
       // Fetch CTA section content
-      const ctaResponse = await fetch('https://api.kingcreativestudio.my.id/chekusphoto/api/content-sections/about_cta_section');
+      const ctaResponse = await fetch('https://api.kingcreativestudio.my.id/user-photo/api/content-sections/about_cta_section');
       if (ctaResponse.ok) {
         const ctaData = await ctaResponse.json();
         setCtaContent(ctaData);
@@ -41,7 +41,7 @@ const About = () => {
 
   const fetchAboutCards = async () => {
     try {
-      const response = await fetch('https://api.kingcreativestudio.my.id/chekusphoto/api/service-cards?card_type=about');
+      const response = await fetch('https://api.kingcreativestudio.my.id/user-photo/api/service-cards?card_type=about');
       if (response.ok) {
         const data = await response.json();
         setAboutCards(data);

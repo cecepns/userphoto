@@ -4,7 +4,7 @@ import { Plus, Edit, Trash2, Image, Star, Eye, EyeOff, Upload } from 'lucide-rea
 import toast, { Toaster } from 'react-hot-toast';
 import AdminLayout from '../../components/AdminLayout';
 
-const API_BASE = 'https://api.kingcreativestudio.my.id/chekusphoto';
+const API_BASE = 'https://api.kingcreativestudio.my.id/user-photo';
 function imageUrl(value) {
   if (!value) return '';
   if (value.startsWith('http')) return value;
@@ -149,8 +149,8 @@ const AdminGallery = () => {
     
     try {
       const url = editingCategory 
-        ? `https://api.kingcreativestudio.my.id/chekusphoto/api/gallery/categories/${editingCategory.id}`
-        : 'https://api.kingcreativestudio.my.id/chekusphoto/api/gallery/categories';
+        ? `https://api.kingcreativestudio.my.id/user-photo/api/gallery/categories/${editingCategory.id}`
+        : 'https://api.kingcreativestudio.my.id/user-photo/api/gallery/categories';
       
       const method = editingCategory ? 'PUT' : 'POST';
       

@@ -25,7 +25,7 @@ const CustomServiceModal = ({ isOpen, onClose }) => {
 
   const fetchServiceOptions = async () => {
     try {
-      const response = await fetch('https://api.kingcreativestudio.my.id/chekusphoto/api/items');
+      const response = await fetch('https://api.kingcreativestudio.my.id/user-photo/api/items');
       const data = await response.json();
       setServiceOptions(data);
     } catch (error) {
@@ -66,7 +66,7 @@ const CustomServiceModal = ({ isOpen, onClose }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch('https://api.kingcreativestudio.my.id/chekusphoto/api/custom-requests', {
+      const response = await fetch('https://api.kingcreativestudio.my.id/user-photo/api/custom-requests', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

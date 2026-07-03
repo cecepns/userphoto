@@ -5,7 +5,7 @@ import toast from "react-hot-toast";
 import { ChevronLeft, ChevronRight, X, Image as ImageIcon } from "lucide-react";
 import { formatRupiah } from "../utils/formatters";
 
-const API_BASE = "https://api.kingcreativestudio.my.id/chekusphoto";
+const API_BASE = "https://api.kingcreativestudio.my.id/user-photo";
 function itemImageUrl(filename) {
   if (!filename || filename.startsWith("http")) return filename || "";
   return `${API_BASE}/uploads-weddingsapp/${filename}`;
@@ -79,7 +79,7 @@ const CustomService = () => {
   const fetchCategories = async () => {
     try {
       const response = await fetch(
-        "https://api.kingcreativestudio.my.id/chekusphoto/api/items/categories"
+        "https://api.kingcreativestudio.my.id/user-photo/api/items/categories"
       );
       const data = await response.json();
       setCategories(data);
@@ -91,10 +91,10 @@ const CustomService = () => {
   const fetchServiceOptions = async (category = "") => {
     try {
       const url = category
-        ? `https://api.kingcreativestudio.my.id/chekusphoto/api/items?category=${encodeURIComponent(
+        ? `https://api.kingcreativestudio.my.id/user-photo/api/items?category=${encodeURIComponent(
             category
           )}`
-        : "https://api.kingcreativestudio.my.id/chekusphoto/api/items";
+        : "https://api.kingcreativestudio.my.id/user-photo/api/items";
       const response = await fetch(url);
       const data = await response.json();
       setServiceOptions(data);
@@ -107,7 +107,7 @@ const CustomService = () => {
   const fetchPaymentMethods = async () => {
     try {
       const response = await fetch(
-        "https://api.kingcreativestudio.my.id/chekusphoto/api/payment-methods"
+        "https://api.kingcreativestudio.my.id/user-photo/api/payment-methods"
       );
       const data = await response.json();
       setPaymentMethods(data);
@@ -122,7 +122,7 @@ const CustomService = () => {
   const fetchCustomServiceContent = async () => {
     try {
       const response = await fetch(
-        "https://api.kingcreativestudio.my.id/chekusphoto/api/content-sections/custom_service_section"
+        "https://api.kingcreativestudio.my.id/user-photo/api/content-sections/custom_service_section"
       );
       if (response.ok) {
         const data = await response.json();
@@ -169,7 +169,7 @@ const CustomService = () => {
     e.preventDefault();
     try {
       const response = await fetch(
-        "https://api.kingcreativestudio.my.id/chekusphoto/api/custom-requests",
+        "https://api.kingcreativestudio.my.id/user-photo/api/custom-requests",
         {
           method: "POST",
           headers: {

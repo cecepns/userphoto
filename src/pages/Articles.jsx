@@ -11,7 +11,7 @@ const Articles = () => {
 
   const fetchArticles = async () => {
     try {
-      const response = await fetch('https://api.kingcreativestudio.my.id/chekusphoto/api/articles');
+      const response = await fetch('https://api.kingcreativestudio.my.id/user-photo/api/articles');
       const data = await response.json();
       setArticles(data);
     } catch (error) {

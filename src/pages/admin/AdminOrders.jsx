@@ -7,7 +7,7 @@ import { formatRupiah, formatDate, formatDateTime } from "../../utils/formatters
 import jsPDF from "jspdf";
 import { useSiteIdentity } from "../../hooks/useSiteIdentity";
 
-const API_BASE = "https://api.kingcreativestudio.my.id/chekusphoto/api";
+const API_BASE = "https://api.kingcreativestudio.my.id/user-photo/api";
 const CLIENT_COLOR_POOL = [
   "bg-green-600 text-white",
   "bg-sky-600 text-white",

@@ -12,7 +12,7 @@ const PaymentInstructions = ({ totalAmount, bookingAmount, onComplete, onBack, o
 
   const fetchPaymentMethods = async () => {
     try {
-      const response = await fetch('https://api.kingcreativestudio.my.id/chekusphoto/api/payment-methods');
+      const response = await fetch('https://api.kingcreativestudio.my.id/user-photo/api/payment-methods');
       const data = await response.json();
       setPaymentMethods(data);
       if (data.length > 0) {

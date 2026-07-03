@@ -27,7 +27,7 @@ const Home = () => {
 
   const fetchHeroContent = async () => {
     try {
-      const response = await fetch('https://api.kingcreativestudio.my.id/chekusphoto/api/content-sections/hero_section');
+      const response = await fetch('https://api.kingcreativestudio.my.id/user-photo/api/content-sections/hero_section');
       if (response.ok) {
         const data = await response.json();
         setHeroContent(data);
@@ -39,7 +39,7 @@ const Home = () => {
 
   const fetchServicesContent = async () => {
     try {
-      const response = await fetch('https://api.kingcreativestudio.my.id/chekusphoto/api/content-sections/services_preview_section');
+      const response = await fetch('https://api.kingcreativestudio.my.id/user-photo/api/content-sections/services_preview_section');
       if (response.ok) {
         const data = await response.json();
         setServicesContent(data);
@@ -51,7 +51,7 @@ const Home = () => {
 
   const fetchServiceCards = async () => {
     try {
-      const response = await fetch('https://api.kingcreativestudio.my.id/chekusphoto/api/service-cards?card_type=service');
+      const response = await fetch('https://api.kingcreativestudio.my.id/user-photo/api/service-cards?card_type=service');
       if (response.ok) {
         const data = await response.json();
         setServiceCards(data);
@@ -63,7 +63,7 @@ const Home = () => {
 
   const fetchCtaContent = async () => {
     try {
-      const response = await fetch('https://api.kingcreativestudio.my.id/chekusphoto/api/content-sections/home_cta_section');
+      const response = await fetch('https://api.kingcreativestudio.my.id/user-photo/api/content-sections/home_cta_section');
       if (response.ok) {
         const data = await response.json();
         setCtaContent(data);
