@@ -281,16 +281,6 @@ const AdminFinance = () => {
             <h1 className="text-3xl font-bold text-gray-800">Catatan Keuangan</h1>
             <p className="text-gray-600">Pendapatan, biaya produksi, dan pendapatan bersih per pesanan.</p>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => setShowSettings(true)}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-900 transition-colors"
-            >
-              <Settings size={18} />
-              Biaya Akomodasi
-            </button>
-          </div>
 
         </div>
 
