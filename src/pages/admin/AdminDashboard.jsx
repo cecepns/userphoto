@@ -9,7 +9,7 @@ import { API_ENDPOINTS, API_BASE } from '../../utils/endpoints';
 import { apiGet } from '../../utils/request';
 import { X, TrendingUp, Users, Star, DollarSign } from 'lucide-react';
 
-const MONTH_NAMES = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
 
 // Modal pembungkus generik
 const StatModal = ({ title, onClose, children }) => (
@@ -269,12 +269,11 @@ const AdminDashboard = () => {
                       <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${order.type === 'custom' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>
                         {order.type === 'custom' ? 'Custom' : 'Biasa'}
                       </span>
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium capitalize ${
-                        order.status === 'completed' ? 'bg-green-100 text-green-700' :
-                        order.status === 'confirmed' ? 'bg-indigo-100 text-indigo-700' :
-                        order.status === 'cancelled' ? 'bg-red-100 text-red-700' :
-                        'bg-yellow-100 text-yellow-700'
-                      }`}>
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium capitalize ${order.status === 'completed' ? 'bg-green-100 text-green-700' :
+                          order.status === 'confirmed' ? 'bg-indigo-100 text-indigo-700' :
+                            order.status === 'cancelled' ? 'bg-red-100 text-red-700' :
+                              'bg-yellow-100 text-yellow-700'
+                        }`}>
                         {order.status || 'Pending'}
                       </span>
                     </div>
@@ -308,9 +307,8 @@ const AdminDashboard = () => {
                       <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${order.type === 'custom' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>
                         {order.type === 'custom' ? 'Custom' : 'Biasa'}
                       </span>
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium capitalize ${
-                        order.status === 'confirmed' ? 'bg-indigo-100 text-indigo-700' : 'bg-yellow-100 text-yellow-700'
-                      }`}>
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium capitalize ${order.status === 'confirmed' ? 'bg-indigo-100 text-indigo-700' : 'bg-yellow-100 text-yellow-700'
+                        }`}>
                         {order.status || 'Pending'}
                       </span>
                     </div>
@@ -396,9 +394,9 @@ const AdminDashboard = () => {
                   <BarChart data={monthlyRevenue}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-                    <YAxis tickFormatter={(v) => `${(v/1000000).toFixed(0)}jt`} tick={{ fontSize: 11 }} />
+                    <YAxis tickFormatter={(v) => `${(v / 1000000).toFixed(0)}jt`} tick={{ fontSize: 11 }} />
                     <Tooltip formatter={(v) => formatRupiah(v)} />
-                    <Bar dataKey="value" fill="#7c3aed" radius={[4,4,0,0]} />
+                    <Bar dataKey="value" fill="#7c3aed" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -414,7 +412,7 @@ const AdminDashboard = () => {
               </div>
 
               <div className="mt-6 border-t pt-6">
-                <h3 className="font-semibold text-gray-800 mb-3">Vendor Teraktif (Terbanyak Ngasih Job)</h3>
+                <h3 className="font-semibold text-gray-800 mb-3">Vendor Teraktif </h3>
                 {vendorJobs.length === 0 ? (
                   <p className="text-gray-400 text-sm">Belum ada data.</p>
                 ) : (
