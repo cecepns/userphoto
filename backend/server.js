@@ -4360,8 +4360,7 @@ app.get('/api/reference-sources', async (req, res) => {
     { value: 'tiktok', label: 'TikTok' },
     { value: 'facebook', label: 'Facebook' },
     { value: 'google', label: 'Google / Pencarian' },
-    { value: 'teman', label: 'Teman / Kerabat' },
-    { value: 'lainnya', label: 'Lainnya' }
+    { value: 'teman', label: 'Teman / Kerabat' }
   ]);
 });
 

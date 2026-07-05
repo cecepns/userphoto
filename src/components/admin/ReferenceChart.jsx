@@ -33,14 +33,14 @@ const ChartTooltip = ({ active, payload }) => {
 const ReferenceChart = ({ data = [] }) => {
   const chartData = useMemo(() => {
     const getStandardKey = (name) => {
-      if (!name) return 'lainnya';
+      if (!name) return '';
       const lowercase = name.toLowerCase().trim();
       if (lowercase === 'instagram' || lowercase === 'ig') return 'instagram';
       if (lowercase === 'tiktok') return 'tiktok';
       if (lowercase === 'facebook' || lowercase === 'fb') return 'facebook';
       if (lowercase === 'google') return 'google';
       if (lowercase === 'teman' || lowercase === 'rekomendasi') return 'teman';
-      return 'lainnya';
+      return '';
     };
 
     const counts = {
@@ -48,13 +48,14 @@ const ReferenceChart = ({ data = [] }) => {
       tiktok: 0,
       facebook: 0,
       google: 0,
-      teman: 0,
-      lainnya: 0
+      teman: 0
     };
 
     data.forEach((item) => {
       const key = getStandardKey(item.name);
-      counts[key] += Number(item.value) || 0;
+      if (counts[key] !== undefined) {
+        counts[key] += Number(item.value) || 0;
+      }
     });
 
     const displayNames = {
@@ -62,8 +63,7 @@ const ReferenceChart = ({ data = [] }) => {
       tiktok: 'TikTok',
       facebook: 'Facebook',
       google: 'Google / Pencarian',
-      teman: 'Teman / Kerabat',
-      lainnya: 'Lainnya'
+      teman: 'Teman / Kerabat'
     };
 
     return Object.keys(counts).map((key) => {

@@ -771,7 +771,6 @@ const BookingModal = ({ service, selectedItems, onClose, onOrderSuccess }) => {
                       <option value="facebook">Facebook</option>
                       <option value="google">Google / Pencarian</option>
                       <option value="teman">Teman / Kerabat</option>
-                      <option value="lainnya">Lainnya</option>
                     </select>
                   </div>
 
