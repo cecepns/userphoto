@@ -462,8 +462,10 @@ const AdminDetailAcara = () => {
                     type={field === 'wedding_date' ? 'date' : 'text'}
                     value={form[field]}
                     onChange={(e) => setField(field, e.target.value)}
-                    className="w-full border rounded-lg px-3 py-2 mt-1"
+                    className={`w-full border rounded-lg px-3 py-2 mt-1 ${field === 'fg_vg' ? 'bg-gray-150 cursor-not-allowed text-gray-600' : ''}`}
                     required={['client_name', 'bride_name', 'groom_name'].includes(field)}
+                    disabled={field === 'fg_vg'}
+                    placeholder={field === 'fg_vg' ? 'Terisi otomatis dari penugasan freelance' : ''}
                   />
                 </div>
               ))}

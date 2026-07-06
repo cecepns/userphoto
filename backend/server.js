@@ -835,6 +835,16 @@ app.get('/api/orders', authenticateAdmin, async (req, res) => {
   }
 });
 
+app.get('/api/orders/:id', authenticateAdmin, async (req, res) => {
+  try {
+    const [rows] = await db.execute('SELECT * FROM orders WHERE id = ?', [req.params.id]);
+    if (!rows[0]) return res.status(404).json({ message: 'Pesanan tidak ditemukan' });
+    res.json(rows[0]);
+  } catch (error) {
+    res.status(500).json({ message: 'Database error' });
+  }
+});
+
 app.get('/api/orders/public/:id', async (req, res) => {
   const { id } = req.params;
   const phoneInput = String(req.query.phone || '').trim();
@@ -1728,6 +1738,21 @@ app.get('/api/custom-requests', authenticateAdmin, async (req, res) => {
     });
   } catch (error) {
     console.error('Custom requests error:', error);
+    res.status(500).json({ message: 'Database error' });
+  }
+});
+
+app.get('/api/custom-requests/:id', authenticateAdmin, async (req, res) => {
+  try {
+    const [rows] = await db.execute('SELECT * FROM custom_requests WHERE id = ?', [req.params.id]);
+    if (!rows[0]) return res.status(404).json({ message: 'Permintaan kustom tidak ditemukan' });
+    const { items, totalAmount } = await getItemsDetailsFromServices(rows[0].services);
+    res.json({
+      ...rows[0],
+      total_amount: totalAmount,
+      items_details: items
+    });
+  } catch (error) {
     res.status(500).json({ message: 'Database error' });
   }
 });
@@ -3825,7 +3850,8 @@ function detailAcaraLegacyMapColumns(maps) {
 
 function serializeDetailAcaraRow(row) {
   const maps = detailAcaraMapsFromRow(row);
-  return { ...row, maps };
+  const fg_vg = (row.assigned_fg_vg !== undefined && row.assigned_fg_vg !== null) ? row.assigned_fg_vg : row.fg_vg;
+  return { ...row, maps, fg_vg };
 }
 
 app.get('/api/detail-acara', authenticateAdmin, async (req, res) => {
@@ -3848,7 +3874,13 @@ app.get('/api/detail-acara', authenticateAdmin, async (req, res) => {
       params
     );
     const [rows] = await db.execute(
-      `SELECT * FROM detail_acara WHERE ${where} ORDER BY wedding_date DESC, id DESC LIMIT ? OFFSET ?`,
+      `SELECT da.*,
+        (SELECT GROUP_CONCAT(photographer_name SEPARATOR ', ')
+         FROM freelance_photographer_assignments
+         WHERE order_source = da.order_source AND order_id = da.order_id) AS assigned_fg_vg
+       FROM detail_acara da
+       WHERE ${where}
+       ORDER BY da.wedding_date DESC, da.id DESC LIMIT ? OFFSET ?`,
       [...params, limit, offset]
     );
 
@@ -3868,7 +3900,15 @@ app.get('/api/detail-acara', authenticateAdmin, async (req, res) => {
 
 app.get('/api/detail-acara/:id', authenticateToken, async (req, res) => {
   try {
-    const [rows] = await db.execute('SELECT * FROM detail_acara WHERE id = ?', [req.params.id]);
+    const [rows] = await db.execute(
+      `SELECT da.*,
+        (SELECT GROUP_CONCAT(photographer_name SEPARATOR ', ')
+         FROM freelance_photographer_assignments
+         WHERE order_source = da.order_source AND order_id = da.order_id) AS assigned_fg_vg
+       FROM detail_acara da
+       WHERE da.id = ?`,
+      [req.params.id]
+    );
     if (!rows[0]) return res.status(404).json({ message: 'Tidak ditemukan' });
     res.json(serializeDetailAcaraRow(rows[0]));
   } catch (error) {

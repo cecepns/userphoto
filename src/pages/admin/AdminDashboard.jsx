@@ -317,9 +317,6 @@ const AdminDashboard = () => {
                   <div className="text-right flex-shrink-0">
                     <p className="text-xs font-medium text-green-600">{formatDate(order.wedding_date)}</p>
                     <div className="flex gap-1 justify-end mt-1">
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${order.type === 'custom' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>
-                        {order.type === 'custom' ? 'Custom' : 'Biasa'}
-                      </span>
                       <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium capitalize ${order.status === 'confirmed' ? 'bg-indigo-100 text-indigo-700' : 'bg-yellow-100 text-yellow-700'
                         }`}>
                         {order.status || 'Pending'}

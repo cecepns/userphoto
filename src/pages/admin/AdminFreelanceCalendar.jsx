@@ -33,6 +33,9 @@ const AdminFreelanceCalendar = () => {
   });
   const [showFreelancerModal, setShowFreelancerModal] = useState(false);
   const [selectedFreelancer, setSelectedFreelancer] = useState(null);
+  const [showClientModal, setShowClientModal] = useState(false);
+  const [selectedClient, setSelectedClient] = useState(null);
+  const [loadingClient, setLoadingClient] = useState(false);
 
   const year = calendarMonth.getFullYear();
   const month = calendarMonth.getMonth() + 1;
@@ -247,6 +250,76 @@ const AdminFreelanceCalendar = () => {
     setShowFreelancerModal(true);
   };
 
+  const handleViewClientDetail = async (row) => {
+    setLoadingClient(true);
+    setShowClientModal(true);
+    try {
+      if (row.detail_acara_id) {
+        const data = await apiGet(`/api/detail-acara/${row.detail_acara_id}`);
+        setSelectedClient({
+          name: data.client_name,
+          phone: data.client_phone,
+          address: data.client_address,
+          wedding_date: data.wedding_date,
+          package_name: data.package_name,
+          bride_name: data.bride_name,
+          groom_name: data.groom_name,
+          notes: data.notes,
+          order_id: row.order_id,
+          order_source: row.order_source
+        });
+        return;
+      }
+      
+      if (row.order_source === 'order') {
+        const data = await apiGet(`/api/orders/${row.order_id}`);
+        setSelectedClient({
+          name: data.name,
+          phone: data.phone,
+          address: data.address,
+          wedding_date: data.wedding_date,
+          package_name: data.service_name,
+          bride_name: data.bride_name,
+          groom_name: data.groom_name,
+          notes: data.notes,
+          order_id: row.order_id,
+          order_source: row.order_source
+        });
+      } else {
+        const data = await apiGet(`/api/custom-requests/${row.order_id}`);
+        setSelectedClient({
+          name: data.name,
+          phone: data.phone,
+          address: data.additional_requests || '',
+          wedding_date: data.wedding_date,
+          package_name: data.services || 'Layanan Custom',
+          bride_name: '',
+          groom_name: '',
+          notes: data.additional_requests,
+          order_id: row.order_id,
+          order_source: row.order_source
+        });
+      }
+    } catch (e) {
+      console.error(e);
+      toast.error('Gagal memuat data client');
+      setSelectedClient({
+        name: row.client_name,
+        phone: row.client_phone,
+        address: '',
+        wedding_date: row.duty_date,
+        package_name: row.service_label || 'Layanan',
+        bride_name: '',
+        groom_name: '',
+        notes: row.notes,
+        order_id: row.order_id,
+        order_source: row.order_source
+      });
+    } finally {
+      setLoadingClient(false);
+    }
+  };
+
   const handleCopyFreelancer = (fl) => {
     if (!fl) return;
     let text = `Detail Freelancer:\n`;
@@ -421,264 +494,155 @@ const AdminFreelanceCalendar = () => {
           </button> */}
         </div>
 
-        <div className="grid lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 bg-white rounded-xl shadow-lg border border-gray-100 p-4 md:p-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
-              <h2 className="text-lg font-semibold text-gray-800">Kalender</h2>
-              <div className="flex flex-wrap items-center gap-3">
-                <div className="min-w-[180px]">
-                  <select
-                    value={freelancerFilter}
-                    onChange={(e) => setFreelancerFilter(e.target.value)}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
-                  >
-                    <option value="all">Semua Freelance</option>
-                    {freelancersList.map(f => (
-                      <option key={f.id} value={f.id}>{f.name}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => changeMonth(-1)}
-                    className="p-2 rounded-full border border-gray-300 text-gray-600 hover:bg-gray-100"
-                    aria-label="Bulan sebelumnya"
-                  >
-                    <ChevronLeft size={18} />
-                  </button>
-                  <span className="text-sm font-medium text-gray-700 min-w-[140px] text-center">
-                    {calendarMonth.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => changeMonth(1)}
-                    className="p-2 rounded-full border border-gray-300 text-gray-600 hover:bg-gray-100"
-                    aria-label="Bulan berikutnya"
-                  >
-                    <ChevronRight size={18} />
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {loading ? (
-              <div className="py-16 text-center text-gray-500">Memuat…</div>
-            ) : (
-              <>
-                <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-semibold text-gray-500 mb-2">
-                  {['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'].map((d) => (
-                    <div key={d}>{d}</div>
+        <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-4 md:p-6 mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+            <h2 className="text-lg font-semibold text-gray-800">Kalender</h2>
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="min-w-[180px]">
+                <select
+                  value={freelancerFilter}
+                  onChange={(e) => setFreelancerFilter(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
+                >
+                  <option value="all">Semua Freelance</option>
+                  {freelancersList.map(f => (
+                    <option key={f.id} value={f.id}>{f.name}</option>
                   ))}
-                </div>
-                <div className="grid grid-cols-7 gap-1">
-                  {days.map((d, idx) => {
-                    if (!d) {
-                      return <div key={`pad-${idx}`} className="min-h-[72px] rounded-lg bg-gray-50/50" />;
-                    }
-                    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
-                      d.getDate()
-                    ).padStart(2, '0')}`;
-                    const list = eventsByDate[key] || [];
-                    const isSelected = selectedDateKey === key;
-                    return (
-                      <button
-                        type="button"
-                        key={key}
-                        onClick={() => setSelectedDateKey(isSelected ? null : key)}
-                        className={`min-h-[72px] rounded-lg border p-1 text-left text-xs transition-colors ${
-                          isSelected
-                            ? 'border-primary-500 bg-primary-50 ring-2 ring-primary-200'
-                            : list.length
-                              ? 'border-indigo-200 bg-indigo-50/40 hover:bg-indigo-50'
-                              : 'border-gray-200 hover:bg-gray-50'
-                        }`}
-                      >
-                        <span className="font-semibold text-gray-700">{d.getDate()}</span>
-                        <div className="mt-1 flex flex-wrap gap-0.5">
-                          {list.slice(0, 3).map((ev) => (
-                            <span
-                              key={ev.id}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleViewFreelancerDetail(ev.freelancer_id, ev.photographer_name);
-                              }}
-                              className="inline-block max-w-full truncate rounded px-1 py-0.5 text-[10px] font-medium cursor-pointer hover:opacity-80"
-                              style={styleForPhotographer(ev.photographer_name)}
-                              title={`${ev.photographer_name} (Klik untuk detail)`}
-                            >
-                              {ev.photographer_name}
-                            </span>
-                          ))}
-                          {list.length > 3 && (
-                            <span className="text-[10px] text-gray-500">+{list.length - 3}</span>
-                          )}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </>
-            )}
-          </div>
-
-          <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-4 md:p-6">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-semibold text-gray-800">Detail hari</h2>
-              {selectedDateKey && (
+                </select>
+              </div>
+              <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => setSelectedDateKey(null)}
-                  className="text-gray-500 hover:text-gray-800 p-1"
-                  aria-label="Tutup"
+                  onClick={() => changeMonth(-1)}
+                  className="p-2 rounded-full border border-gray-300 text-gray-600 hover:bg-gray-100"
+                  aria-label="Bulan sebelumnya"
                 >
-                  <X size={18} />
+                  <ChevronLeft size={18} />
                 </button>
-              )}
+                <span className="text-sm font-medium text-gray-700 min-w-[140px] text-center">
+                  {calendarMonth.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => changeMonth(1)}
+                  className="p-2 rounded-full border border-gray-300 text-gray-600 hover:bg-gray-100"
+                  aria-label="Bulan berikutnya"
+                >
+                  <ChevronRight size={18} />
+                </button>
+              </div>
             </div>
-            {!selectedDateKey ? (
-              <p className="text-sm text-gray-500">Klik tanggal di kalender untuk melihat daftar penugasan.</p>
-            ) : selectedDayEvents.length === 0 ? (
-              <p className="text-sm text-gray-500">Belum ada penugasan di {formatDate(selectedDateKey)}.</p>
-            ) : (
-              <ul className="space-y-3 max-h-[420px] overflow-y-auto pr-1">
-                {selectedDayEvents.map((ev) => (
-                  <li
-                    key={ev.id}
-                    className="rounded-lg border border-gray-200 p-3 text-sm"
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <p
-                          onClick={() => handleViewFreelancerDetail(ev.freelancer_id, ev.photographer_name)}
-                          className="inline-block rounded px-2 py-0.5 text-xs font-semibold cursor-pointer hover:opacity-80"
-                          style={styleForPhotographer(ev.photographer_name)}
-                          title="Klik untuk detail"
-                        >
-                          {ev.photographer_name}
-                        </p>
-                        <p className="mt-1 font-medium text-gray-900">
-                          {ev.client_name || '-'} · #
-                          {ev.order_source === 'custom_request' ? `C${ev.order_id}` : ev.order_id}
-                        </p>
-                        <p className="text-xs text-gray-500">{ev.client_phone}</p>
-                        {ev.notes ? (
-                          <p className="text-xs text-gray-600 mt-1 whitespace-pre-wrap">{ev.notes}</p>
-                        ) : null}
-                      </div>
-                      <div className="flex gap-1.5 shrink-0 items-center">
-                        {ev.detail_acara_id ? (
-                          <>
-                            <button
-                              type="button"
-                              onClick={() => handleDownloadPdf(ev.detail_acara_id)}
-                              className="p-1.5 rounded-lg text-green-600 bg-green-50 hover:bg-green-100"
-                              title="Unduh PDF Acara"
-                            >
-                              <Download size={14} />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleCopyTextFromId(ev.detail_acara_id)}
-                              className="p-1.5 rounded-lg text-blue-600 bg-blue-50 hover:bg-blue-100"
-                              title="Salin Detail (WA)"
-                            >
-                              <Copy size={14} />
-                            </button>
-                          </>
-                        ) : null}
-                        {/* <button
-                          type="button"
-                          onClick={() => openEdit(ev)}
-                          className="p-1.5 rounded-lg text-[#2f4274] bg-[#2f4274]/10 hover:bg-[#2f4274]/20"
-                          title="Edit"
-                        >
-                          <Edit size={14} />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDelete(ev.id)}
-                          className="p-1.5 rounded-lg text-red-600 bg-red-50 hover:bg-red-100"
-                          title="Hapus"
-                        >
-                          <Trash2 size={14} />
-                        </button> */}
-                      </div>
+          </div>
 
-                    </div>
-                  </li>
+          {loading ? (
+            <div className="py-16 text-center text-gray-500">Memuat…</div>
+          ) : (
+            <>
+              <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-semibold text-gray-500 mb-2">
+                {['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'].map((d) => (
+                  <div key={d}>{d}</div>
                 ))}
-              </ul>
+              </div>
+              <div className="grid grid-cols-7 gap-1">
+                {days.map((d, idx) => {
+                  if (!d) {
+                    return <div key={`pad-${idx}`} className="min-h-[72px] rounded-lg bg-gray-50/50" />;
+                  }
+                  const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
+                    d.getDate()
+                  ).padStart(2, '0')}`;
+                  const list = eventsByDate[key] || [];
+                  const isSelected = selectedDateKey === key;
+                  return (
+                    <button
+                      type="button"
+                      key={key}
+                      onClick={() => setSelectedDateKey(isSelected ? null : key)}
+                      className={`min-h-[72px] rounded-lg border p-1 text-left text-xs transition-colors ${
+                        isSelected
+                          ? 'border-primary-500 bg-primary-50 ring-2 ring-primary-200'
+                          : list.length
+                            ? 'border-indigo-200 bg-indigo-50/40 hover:bg-indigo-50'
+                            : 'border-gray-200 hover:bg-gray-50'
+                      }`}
+                    >
+                      <span className="font-semibold text-gray-700">{d.getDate()}</span>
+                      <div className="mt-1 flex flex-wrap gap-0.5">
+                        {list.slice(0, 3).map((ev) => (
+                          <span
+                            key={ev.id}
+                            className="inline-block max-w-full truncate rounded px-1 py-0.5 text-[10px] font-medium"
+                            style={styleForPhotographer(ev.photographer_name)}
+                            title={ev.photographer_name}
+                          >
+                            {ev.photographer_name}
+                          </span>
+                        ))}
+                        {list.length > 3 && (
+                          <span className="text-[10px] text-gray-500">+{list.length - 3}</span>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          )}
+        </div>
+
+        {selectedDateKey && (
+          <div className="bg-white rounded-xl border border-gray-100 shadow p-6 mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-800">
+                Detail Penugasan Tanggal {formatDate(selectedDateKey)}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setSelectedDateKey(null)}
+                className="text-sm font-medium text-primary-600 hover:text-primary-800"
+              >
+                Tutup detail
+              </button>
+            </div>
+            {selectedDayEvents.length === 0 ? (
+              <p className="text-sm text-gray-500 py-4">Belum ada penugasan di tanggal ini.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-gray-500 border-b">
+                      <th className="py-2 pr-2">Fg/Vg</th>
+                      <th className="py-2 pr-2">Klien / Pesanan</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selectedDayEvents.map((row) => (
+                      <tr
+                        key={row.id}
+                        onClick={() => handleViewClientDetail(row)}
+                        className="border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors"
+                        title="Klik untuk detail client"
+                      >
+                        <td className="py-3 pr-2 font-medium text-gray-700">
+                          <span
+                            className="inline-block rounded px-2 py-0.5 text-xs font-semibold"
+                            style={styleForPhotographer(row.photographer_name)}
+                          >
+                            {row.photographer_name}
+                          </span>
+                        </td>
+                        <td className="py-3 pr-2 font-medium text-primary-600 hover:underline">
+                          {row.client_name || '-'} · #
+                          {row.order_source === 'custom_request' ? `C${row.order_id}` : row.order_id}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
-        </div>
-
-        <div className="mt-6 bg-white rounded-xl border border-gray-100 shadow p-4">
-          <h3 className="text-sm font-semibold text-gray-800 mb-2">Semua penugasan bulan ini</h3>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm min-w-[640px]">
-              <thead>
-                <tr className="text-left text-gray-500 border-b">
-                  <th className="py-2 pr-2">Tanggal bertugas</th>
-                  <th className="py-2 pr-2">Fg/Vg</th>
-                  <th className="py-2 pr-2">Klien / Pesanan</th>
-                  <th className="py-2 pr-2 w-24">Aksi</th>
-                </tr>
-              </thead>
-              <tbody>
-                {assignments.length === 0 ? (
-                  <tr>
-                    <td colSpan={4} className="py-6 text-center text-gray-500">
-                      Belum ada data
-                    </td>
-                  </tr>
-                ) : (
-                  assignments.map((row) => (
-                    <tr key={row.id} className="border-b border-gray-100">
-                      <td className="py-2 pr-2 whitespace-nowrap">{formatDate(row.duty_date)}</td>
-                      <td 
-                        onClick={() => handleViewFreelancerDetail(row.freelancer_id, row.photographer_name)}
-                        className="py-2 pr-2 font-medium cursor-pointer text-primary-600 hover:underline"
-                        title="Klik untuk detail"
-                      >
-                        {row.photographer_name}
-                      </td>
-                      <td className="py-2 pr-2">
-                        {row.client_name || '-'} · #
-                        {row.order_source === 'custom_request' ? `C${row.order_id}` : row.order_id}
-                      </td>
-                      <td className="py-2 pr-2">
-                        <div className="flex gap-1.5 items-center">
-                          {row.detail_acara_id ? (
-                            <>
-                              <button
-                                type="button"
-                                onClick={() => handleDownloadPdf(row.detail_acara_id)}
-                                className="p-1.5 rounded-lg text-green-600 bg-green-50 hover:bg-green-100"
-                                title="Unduh PDF Acara"
-                              >
-                                <Download size={14} />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleCopyTextFromId(row.detail_acara_id)}
-                                className="p-1.5 rounded-lg text-blue-600 bg-blue-50 hover:bg-blue-100"
-                                title="Salin Detail (WA)"
-                              >
-                                <Copy size={14} />
-                              </button>
-                            </>
-                          ) : null}
-                        </div>
-                      </td>
-
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        )}
 
         {showModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
@@ -852,6 +816,82 @@ const AdminFreelanceCalendar = () => {
                   onClick={() => {
                     setShowFreelancerModal(false);
                     setSelectedFreelancer(null);
+                  }}
+                  className="px-4 py-2 rounded-lg bg-gray-100 text-gray-800 hover:bg-gray-200 text-sm font-medium"
+                >
+                  Tutup
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showClientModal && selectedClient && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col">
+              <div className="p-5 border-b border-gray-200 flex justify-between items-center">
+                <h2 className="text-lg font-semibold text-gray-800">
+                  Detail Client / Pesanan
+                </h2>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowClientModal(false);
+                    setSelectedClient(null);
+                  }}
+                  className="text-gray-500 hover:text-gray-800 p-1"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+              <div className="p-5 space-y-4 overflow-y-auto">
+                {loadingClient ? (
+                  <p className="text-center text-gray-500 py-8">Memuat detail client...</p>
+                ) : (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-400 uppercase">Nama Client</label>
+                      <p className="text-sm font-medium text-gray-900 mt-0.5">{selectedClient.name || '—'}</p>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-400 uppercase">No. HP</label>
+                      <p className="text-sm font-medium text-gray-900 mt-0.5">{selectedClient.phone || '—'}</p>
+                    </div>
+                    {selectedClient.bride_name && selectedClient.groom_name && (
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-400 uppercase">Pasangan</label>
+                        <p className="text-sm font-medium text-gray-900 mt-0.5">
+                          {selectedClient.bride_name} &amp; {selectedClient.groom_name}
+                        </p>
+                      </div>
+                    )}
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-400 uppercase">Tanggal Acara</label>
+                      <p className="text-sm font-medium text-gray-900 mt-0.5">{selectedClient.wedding_date ? formatDate(selectedClient.wedding_date) : '—'}</p>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-400 uppercase">Layanan / Paket</label>
+                      <p className="text-sm font-medium text-gray-900 mt-0.5">{selectedClient.package_name || '—'}</p>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-400 uppercase">Alamat</label>
+                      <p className="text-sm font-medium text-gray-900 mt-0.5 whitespace-pre-wrap">{selectedClient.address || '—'}</p>
+                    </div>
+                    {selectedClient.notes && (
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-400 uppercase">Catatan</label>
+                        <p className="text-sm font-medium text-gray-900 mt-0.5 whitespace-pre-wrap">{selectedClient.notes}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+              <div className="p-5 border-t border-gray-150 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowClientModal(false);
+                    setSelectedClient(null);
                   }}
                   className="px-4 py-2 rounded-lg bg-gray-100 text-gray-800 hover:bg-gray-200 text-sm font-medium"
                 >
