@@ -2261,7 +2261,7 @@ const AdminOrders = () => {
               </div>
 
               {(selectedOrder.notes || selectedOrder.additional_requests) && (
-                <div className="mb-6">
+                <div className="mb-6 px-6">
                   <h3 className="text-lg font-semibold text-gray-800 mb-2">
                     Catatan
                   </h3>
@@ -2271,7 +2271,7 @@ const AdminOrders = () => {
                 </div>
               )}
 
-              <div className="mb-6">
+              <div className="mb-6 px-6">
                 <h3 className="text-lg font-semibold text-gray-800 mb-4">
                   Item yang Dipilih
                 </h3>
@@ -2401,7 +2401,7 @@ const AdminOrders = () => {
                 )}
               </div>
 
-              <div className="flex justify-end space-x-3">
+              <div className="flex justify-end space-x-3 px-6 pb-6">
                 <button
                   id="close-modal-button"
                   onClick={() => setShowDetailModal(false)}
