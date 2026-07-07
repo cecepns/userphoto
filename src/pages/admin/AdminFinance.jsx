@@ -339,7 +339,7 @@ const AdminFinance = () => {
         {summary && (() => {
           const periodText = period === 'monthly' ? `${MONTH_NAMES[month - 1]} ${year}` : `${year}`;
           return (
-            <div className="grid md:grid-cols-5 gap-4 mb-8">
+            <div className="grid sm:grid-cols-5 md:grid-cols-3 gap-4 mb-8">
               <button
                 onClick={() => setActivePanel('masuk')}
                 type="button"

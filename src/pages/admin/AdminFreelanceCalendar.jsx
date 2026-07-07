@@ -69,8 +69,14 @@ const AdminFreelanceCalendar = () => {
   }, [fetchAssignments, fetchFreelancers]);
 
   const filteredAssignments = useMemo(() => {
-    if (freelancerFilter === "all") return assignments;
-    return assignments.filter(a => String(a.freelancer_id) === String(freelancerFilter));
+    // Only show assignments that:
+    // 1. Have a freelancer assigned (freelancer_id is set)
+    // 2. Have valid order data (client_name not null means the order exists)
+    const assigned = assignments.filter(
+      a => a.freelancer_id != null && a.client_name != null
+    );
+    if (freelancerFilter === "all") return assigned;
+    return assigned.filter(a => String(a.freelancer_id) === String(freelancerFilter));
   }, [assignments, freelancerFilter]);
 
   const eventsByDate = useMemo(() => {
@@ -613,7 +619,6 @@ const AdminFreelanceCalendar = () => {
                     <tr className="text-left text-gray-500 border-b">
                       <th className="py-2 pr-2">Fg/Vg</th>
                       <th className="py-2 pr-2">Klien / Pesanan</th>
-                      <th className="py-2 pr-2 text-right">Aksi</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -635,28 +640,6 @@ const AdminFreelanceCalendar = () => {
                         <td className="py-3 pr-2 font-medium text-primary-600 hover:underline">
                           {row.client_name || '-'} · #
                           {row.order_source === 'custom_request' ? `C${row.order_id}` : row.order_id}
-                        </td>
-                        <td className="py-3 pr-2 text-right">
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              openEdit(row);
-                            }}
-                            className="text-primary-600 hover:text-primary-800 font-semibold mr-3"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDelete(row.id);
-                            }}
-                            className="text-red-600 hover:text-red-800 font-semibold"
-                          >
-                            Hapus
-                          </button>
                         </td>
                       </tr>
                     ))}
