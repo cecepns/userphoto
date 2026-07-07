@@ -3290,10 +3290,23 @@ app.get('/api/admin/finance/summary', authenticateAdmin, async (req, res) => {
       period === 'monthly' ? [accommodationDefault, ...paramsOrders, ...paramsCustom] : [accommodationDefault, year, year]
     );
 
+    const [discountRows] = await db.execute(
+      `SELECT COALESCE(SUM(discount), 0) AS discount_total
+       FROM order_financials ofn
+       LEFT JOIN orders o ON ofn.order_source = 'order' AND ofn.order_id = o.id
+       LEFT JOIN custom_requests cr ON ofn.order_source = 'custom_request' AND ofn.order_id = cr.id
+       WHERE (
+         (ofn.order_source = 'order' AND o.id IS NOT NULL AND ${dateFilterOrders.replace(/created_at/g, 'o.created_at')})
+         OR (ofn.order_source = 'custom_request' AND cr.id IS NOT NULL AND ${dateFilterCustom.replace(/created_at/g, 'cr.created_at')})
+       )`,
+      period === 'monthly' ? [...paramsOrders, ...paramsCustom] : [year, year]
+    );
+
     const productionTotal = Number(prodRows[0]?.production_total || 0);
     const accommodationTotal = Number(accomRows[0]?.accommodation_total || 0);
+    const discountTotal = Number(discountRows[0]?.discount_total || 0);
     const totalExpenses = productionTotal + accommodationTotal;
-    const netIncome = grossIncome - totalExpenses;
+    const netIncome = grossIncome - discountTotal - totalExpenses;
 
     res.json({
       success: true,
@@ -3302,6 +3315,7 @@ app.get('/api/admin/finance/summary', authenticateAdmin, async (req, res) => {
         year,
         month: period === 'monthly' ? month : null,
         grossIncome,
+        discountTotal,
         productionTotal,
         accommodationTotal,
         accommodationDefault,
@@ -3397,7 +3411,7 @@ app.get('/api/admin/finance/orders', authenticateAdmin, async (req, res) => {
     const enriched = [];
     for (const row of rows) {
       const [finRows] = await db.execute(
-        `SELECT id, accommodation_applied, accommodation_cost, notes FROM order_financials
+        `SELECT id, accommodation_applied, accommodation_cost, discount, notes FROM order_financials
          WHERE order_source = ? AND order_id = ? LIMIT 1`,
         [row.order_source, row.order_id]
       );
@@ -3415,15 +3429,19 @@ app.get('/api/admin/finance/orders', authenticateAdmin, async (req, res) => {
       const accommodationCost = fin?.accommodation_cost !== null && fin?.accommodation_cost !== undefined
         ? Number(fin.accommodation_cost)
         : (fin?.accommodation_applied ? accommodationDefault : 0);
+      const discount = fin?.discount !== null && fin?.discount !== undefined
+        ? Number(fin.discount)
+        : 0;
       enriched.push({
         ...row,
         financial_id: fin?.id || null,
         accommodation_applied: Boolean(fin?.accommodation_applied),
         accommodation_cost: accommodationCost,
+        discount: discount,
         notes: fin?.notes || '',
         production_items: items,
         production_total: productionTotal,
-        net_amount: Number(row.gross_amount || 0) - productionTotal - accommodationCost
+        net_amount: Number(row.gross_amount || 0) - discount - productionTotal - accommodationCost
       });
     }
 
@@ -3445,6 +3463,9 @@ async function upsertOrderFinancialRecord(body, mode = 'upsert') {
   const accommodationCost = body?.accommodation_cost !== undefined && body?.accommodation_cost !== null && body?.accommodation_cost !== ''
     ? Number(body.accommodation_cost)
     : null;
+  const discount = body?.discount !== undefined && body?.discount !== null && body?.discount !== ''
+    ? Number(body.discount)
+    : null;
   const notes = body?.notes != null ? String(body.notes) : null;
   const items = Array.isArray(body?.production_items) ? body.production_items : [];
 
@@ -3462,9 +3483,9 @@ async function upsertOrderFinancialRecord(body, mode = 'upsert') {
 
   if (!financialId) {
     const [ins] = await db.execute(
-      `INSERT INTO order_financials (order_source, order_id, accommodation_applied, accommodation_cost, notes)
-       VALUES (?, ?, ?, ?, ?)`,
-      [orderSource, orderId, accommodationApplied ? 1 : 0, accommodationCost, notes]
+      `INSERT INTO order_financials (order_source, order_id, accommodation_applied, accommodation_cost, discount, notes)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [orderSource, orderId, accommodationApplied ? 1 : 0, accommodationCost, discount, notes]
     );
     financialId = ins.insertId;
   } else {
@@ -3475,11 +3496,12 @@ async function upsertOrderFinancialRecord(body, mode = 'upsert') {
       throw err;
     }
     await db.execute(
-      `UPDATE order_financials SET accommodation_applied = ?, accommodation_cost = ?, notes = ? WHERE id = ?`,
-      [accommodationApplied ? 1 : 0, accommodationCost, notes, financialId]
+      `UPDATE order_financials SET accommodation_applied = ?, accommodation_cost = ?, discount = ?, notes = ? WHERE id = ?`,
+      [accommodationApplied ? 1 : 0, accommodationCost, discount, notes, financialId]
     );
     await db.execute('DELETE FROM production_cost_items WHERE order_financial_id = ?', [financialId]);
   }
+
 
   for (let i = 0; i < items.length; i += 1) {
     const label = String(items[i]?.label || '').trim();
@@ -4432,6 +4454,58 @@ app.get('/api/reference-sources', async (req, res) => {
   ]);
 });
 
+
+// Get paginated combined active services (orders & custom requests that are pending/confirmed and on or after today)
+app.get('/api/admin/active-services', authenticateAdmin, async (req, res) => {
+  const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+  const limit = Math.max(1, parseInt(req.query.limit, 10) || 10);
+  const offset = (page - 1) * limit;
+
+  try {
+    const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+
+    // 1. Get total count
+    const [countRows] = await db.execute(`
+      SELECT SUM(total) AS total FROM (
+        SELECT COUNT(*) AS total FROM orders 
+        WHERE status IN ('pending', 'confirmed') AND (wedding_date IS NULL OR wedding_date >= ?)
+        UNION ALL
+        SELECT COUNT(*) AS total FROM custom_requests 
+        WHERE status IN ('pending', 'confirmed') AND (wedding_date IS NULL OR wedding_date >= ?)
+      ) AS combined_count
+    `, [today, today]);
+    const total = Number(countRows[0]?.total || 0);
+
+    // 2. Get rows
+    const [rows] = await db.execute(`
+      SELECT * FROM (
+        SELECT id, name, service_name, wedding_date, status, 'order' AS type FROM orders
+        WHERE status IN ('pending', 'confirmed') AND (wedding_date IS NULL OR wedding_date >= ?)
+        UNION ALL
+        SELECT id, name, services AS service_name, wedding_date, status, 'custom' AS type FROM custom_requests
+        WHERE status IN ('pending', 'confirmed') AND (wedding_date IS NULL OR wedding_date >= ?)
+      ) AS combined_items
+      ORDER BY 
+        CASE WHEN wedding_date IS NULL THEN 1 ELSE 0 END,
+        wedding_date ASC, 
+        name ASC
+      LIMIT ? OFFSET ?
+    `, [today, today, limit, offset]);
+
+    res.json({
+      items: rows,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit)
+      }
+    });
+  } catch (error) {
+    console.error('Active services error:', error);
+    res.status(500).json({ message: 'Database error' });
+  }
+});
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

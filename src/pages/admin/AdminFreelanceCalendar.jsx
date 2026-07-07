@@ -489,9 +489,9 @@ const AdminFreelanceCalendar = () => {
           <div>
             <h1 className="text-3xl font-bold text-gray-800 mb-2">Kalender Freelance</h1>
           </div>
-          {/* <button type="button" onClick={openCreate} className="btn-primary flex items-center gap-2 shrink-0">
+          <button type="button" onClick={openCreate} className="btn-primary flex items-center gap-2 shrink-0">
             <Plus size={18} /> Tambah penugasan
-          </button> */}
+          </button>
         </div>
 
         <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-4 md:p-6 mb-6">
@@ -613,6 +613,7 @@ const AdminFreelanceCalendar = () => {
                     <tr className="text-left text-gray-500 border-b">
                       <th className="py-2 pr-2">Fg/Vg</th>
                       <th className="py-2 pr-2">Klien / Pesanan</th>
+                      <th className="py-2 pr-2 text-right">Aksi</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -634,6 +635,28 @@ const AdminFreelanceCalendar = () => {
                         <td className="py-3 pr-2 font-medium text-primary-600 hover:underline">
                           {row.client_name || '-'} · #
                           {row.order_source === 'custom_request' ? `C${row.order_id}` : row.order_id}
+                        </td>
+                        <td className="py-3 pr-2 text-right">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openEdit(row);
+                            }}
+                            className="text-primary-600 hover:text-primary-800 font-semibold mr-3"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDelete(row.id);
+                            }}
+                            className="text-red-600 hover:text-red-800 font-semibold"
+                          >
+                            Hapus
+                          </button>
                         </td>
                       </tr>
                     ))}

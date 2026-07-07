@@ -1,4 +1,5 @@
-export const API_BASE = 'https://api.kingcreativestudio.my.id/user-photo';
+import { API_BASE } from './endpoints';
+export { API_BASE };
 
 export function imageUrl(value) {
   if (!value) return '';

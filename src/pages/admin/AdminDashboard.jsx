@@ -43,12 +43,15 @@ const AdminDashboard = () => {
   const [revenueData, setRevenueData] = useState(null);
   const [monthlyRevenue, setMonthlyRevenue] = useState([]);
   const [modalLoading, setModalLoading] = useState(false);
+  const [modalPage, setModalPage] = useState(1);
+  const [modalTotalPages, setModalTotalPages] = useState(1);
+  const [modalTotal, setModalTotal] = useState(0);
+  const modalLimit = 10;
 
   useEffect(() => {
     fetchStats();
     fetchPackageSales();
     fetchVendorJobs();
-    fetchActiveServices();
   }, []);
 
   const fetchStats = async () => {
@@ -82,20 +85,21 @@ const AdminDashboard = () => {
   };
 
   // Fetch data untuk modal Total Pesanan
-  const fetchAllOrders = useCallback(async () => {
+  const fetchAllOrders = useCallback(async (page) => {
     setModalLoading(true);
     try {
       const token = localStorage.getItem('admin_token');
-      const ordersRes = await fetch(`${API_BASE}/api/orders?page=1&limit=500`, { headers: { Authorization: `Bearer ${token}` } });
-      const ordersData = await ordersRes.json();
-      const orders = (Array.isArray(ordersData) ? ordersData : ordersData.orders || []).map(o => ({ ...o, type: 'order' }));
-      const sorted = orders.sort((a, b) => {
-        const dateA = new Date(a.wedding_date || '9999');
-        const dateB = new Date(b.wedding_date || '9999');
-        if (dateA - dateB !== 0) return dateA - dateB;
-        return (a.name || '').localeCompare(b.name || '');
-      });
-      setAllOrders(sorted);
+      const ordersRes = await fetch(`${API_BASE}/api/orders?page=${page}&limit=${modalLimit}`, { headers: { Authorization: `Bearer ${token}` } });
+      const data = await ordersRes.json();
+      const items = (data.orders || data || []).map(o => ({ ...o, type: 'order' }));
+      setAllOrders(items);
+      if (data.pagination) {
+        setModalTotalPages(data.pagination.totalPages);
+        setModalTotal(data.pagination.total);
+      } else {
+        setModalTotalPages(1);
+        setModalTotal(items.length);
+      }
     } catch (e) {
       console.error(e);
     } finally {
@@ -104,40 +108,20 @@ const AdminDashboard = () => {
   }, []);
 
   // Fetch data untuk modal Layanan Aktif (belum terlaksana)
-  const fetchActiveServices = useCallback(async () => {
+  const fetchActiveServices = useCallback(async (page) => {
     setModalLoading(true);
     try {
       const token = localStorage.getItem('admin_token');
-      const [ordersRes, customRes] = await Promise.all([
-        fetch(`${API_BASE}/api/orders?page=1&limit=500&status=pending,confirmed`, { headers: { Authorization: `Bearer ${token}` } }),
-        fetch(`${API_BASE}/api/custom-requests?page=1&limit=500&status=pending,confirmed`, { headers: { Authorization: `Bearer ${token}` } }),
-      ]);
-      const ordersData = await ordersRes.json();
-      const customData = await customRes.json();
-      const orders = (Array.isArray(ordersData) ? ordersData : ordersData.orders || []).map(o => ({ ...o, type: 'order' }));
-      const customs = (customData.requests || []).map(r => ({ ...r, type: 'custom', service_name: r.services || '-' }));
-      
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-
-      const active = [...orders, ...customs]
-        .filter(item => {
-          if (item.wedding_date) {
-            const wDate = new Date(item.wedding_date);
-            if (wDate < today) return false;
-          }
-          if (item.status === 'confirmed' || item.status === 'completed' || item.status === 'cancelled') {
-            return false;
-          }
-          return true;
-        })
-        .sort((a, b) => {
-          const dateA = new Date(a.wedding_date || '9999');
-          const dateB = new Date(b.wedding_date || '9999');
-          if (dateA - dateB !== 0) return dateA - dateB;
-          return (a.name || '').localeCompare(b.name || '');
-        });
-      setActiveServices(active);
+      const res = await fetch(`${API_BASE}/api/admin/active-services?page=${page}&limit=${modalLimit}`, { headers: { Authorization: `Bearer ${token}` } });
+      const data = await res.json();
+      setActiveServices(data.items || []);
+      if (data.pagination) {
+        setModalTotalPages(data.pagination.totalPages);
+        setModalTotal(data.pagination.total);
+      } else {
+        setModalTotalPages(1);
+        setModalTotal((data.items || []).length);
+      }
     } catch (e) {
       console.error(e);
     } finally {
@@ -146,13 +130,21 @@ const AdminDashboard = () => {
   }, []);
 
   // Fetch data untuk modal Permintaan Kustom
-  const fetchCustomClients = useCallback(async () => {
+  const fetchCustomClients = useCallback(async (page) => {
     setModalLoading(true);
     try {
       const token = localStorage.getItem('admin_token');
-      const res = await fetch(`${API_BASE}/api/custom-requests?page=1&limit=500&status=pending`, { headers: { Authorization: `Bearer ${token}` } });
+      const res = await fetch(`${API_BASE}/api/custom-requests?page=${page}&limit=${modalLimit}&status=pending`, { headers: { Authorization: `Bearer ${token}` } });
       const data = await res.json();
-      setCustomClients(data.requests || []);
+      const items = data.requests || data || [];
+      setCustomClients(items);
+      if (data.pagination) {
+        setModalTotalPages(data.pagination.totalPages);
+        setModalTotal(data.pagination.total);
+      } else {
+        setModalTotalPages(1);
+        setModalTotal(items.length);
+      }
     } catch (e) {
       console.error(e);
     } finally {
@@ -184,10 +176,18 @@ const AdminDashboard = () => {
 
   const handleOpenModal = (modal) => {
     setActiveModal(modal);
-    if (modal === 'orders') fetchAllOrders();
-    if (modal === 'services') fetchActiveServices();
-    if (modal === 'custom') fetchCustomClients();
+    setModalPage(1);
+    if (modal === 'orders') fetchAllOrders(1);
+    if (modal === 'services') fetchActiveServices(1);
+    if (modal === 'custom') fetchCustomClients(1);
     if (modal === 'revenue') fetchRevenueData(selectedYear);
+  };
+
+  const handleModalPageChange = (newPage) => {
+    setModalPage(newPage);
+    if (activeModal === 'orders') fetchAllOrders(newPage);
+    if (activeModal === 'services') fetchActiveServices(newPage);
+    if (activeModal === 'custom') fetchCustomClients(newPage);
   };
 
   const STAT_CARDS = [
@@ -271,29 +271,56 @@ const AdminDashboard = () => {
           ) : allOrders.length === 0 ? (
             <p className="text-center text-gray-400 py-8">Tidak ada pesanan aktif.</p>
           ) : (
-            <div className="space-y-2">
-              {allOrders.map((order, idx) => (
-                <div key={`${order.type}-${order.id}`} className="flex items-center gap-3 p-3 rounded-lg border border-gray-100 hover:bg-gray-50">
-                  <span className="text-xs font-bold text-gray-400 w-6">{idx + 1}</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-gray-800 truncate">{order.name}</p>
-                    <p className="text-xs text-gray-500">{order.service_name || '-'}</p>
-                  </div>
-                  <div className="text-right flex-shrink-0">
-                    <p className="text-xs font-medium text-primary-600">{formatDate(order.wedding_date)}</p>
-                    <div className="flex gap-1 justify-end mt-1">
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium capitalize ${order.status === 'completed' ? 'bg-green-100 text-green-700' :
-                          order.status === 'confirmed' ? 'bg-indigo-100 text-indigo-700' :
-                            order.status === 'cancelled' ? 'bg-red-100 text-red-700' :
-                              'bg-yellow-100 text-yellow-700'
-                        }`}>
-                        {order.status || 'Pending'}
-                      </span>
+            <>
+              <div className="space-y-2">
+                {allOrders.map((order, idx) => (
+                  <div key={`${order.type}-${order.id}`} className="flex items-center gap-3 p-3 rounded-lg border border-gray-100 hover:bg-gray-50">
+                    <span className="text-xs font-bold text-gray-400 w-6">{((modalPage - 1) * modalLimit) + idx + 1}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-gray-800 truncate">{order.name}</p>
+                      <p className="text-xs text-gray-500">{order.service_name || '-'}</p>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <p className="text-xs font-medium text-primary-600">{formatDate(order.wedding_date)}</p>
+                      <div className="flex gap-1 justify-end mt-1">
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium capitalize ${order.status === 'completed' ? 'bg-green-100 text-green-700' :
+                            order.status === 'confirmed' ? 'bg-indigo-100 text-indigo-700' :
+                              order.status === 'cancelled' ? 'bg-red-100 text-red-700' :
+                                'bg-yellow-100 text-yellow-700'
+                          }`}>
+                          {order.status || 'Pending'}
+                        </span>
+                      </div>
                     </div>
                   </div>
+                ))}
+              </div>
+              {modalTotalPages > 1 && (
+                <div className="mt-4 flex items-center justify-between border-t pt-4">
+                  <span className="text-xs text-gray-500">
+                    Halaman {modalPage} / {modalTotalPages} ({modalTotal} item)
+                  </span>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      disabled={modalPage <= 1}
+                      onClick={() => handleModalPageChange(modalPage - 1)}
+                      className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-semibold disabled:opacity-40"
+                    >
+                      Sebelumnya
+                    </button>
+                    <button
+                      type="button"
+                      disabled={modalPage >= modalTotalPages}
+                      onClick={() => handleModalPageChange(modalPage + 1)}
+                      className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-semibold disabled:opacity-40"
+                    >
+                      Berikutnya
+                    </button>
+                  </div>
                 </div>
-              ))}
-            </div>
+              )}
+            </>
           )}
         </StatModal>
       )}
@@ -306,26 +333,53 @@ const AdminDashboard = () => {
           ) : activeServices.length === 0 ? (
             <p className="text-center text-gray-400 py-8">Semua layanan sudah terlaksana.</p>
           ) : (
-            <div className="space-y-2">
-              {activeServices.map((order, idx) => (
-                <div key={`${order.type}-${order.id}`} className="flex items-center gap-3 p-3 rounded-lg border border-gray-100 hover:bg-gray-50">
-                  <span className="text-xs font-bold text-gray-400 w-6">{idx + 1}</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-gray-800 truncate">{order.name}</p>
-                    <p className="text-xs text-gray-500">{order.service_name || '-'}</p>
-                  </div>
-                  <div className="text-right flex-shrink-0">
-                    <p className="text-xs font-medium text-green-600">{formatDate(order.wedding_date)}</p>
-                    <div className="flex gap-1 justify-end mt-1">
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium capitalize ${order.status === 'confirmed' ? 'bg-indigo-100 text-indigo-700' : 'bg-yellow-100 text-yellow-700'
-                        }`}>
-                        {order.status || 'Pending'}
-                      </span>
+            <>
+              <div className="space-y-2">
+                {activeServices.map((order, idx) => (
+                  <div key={`${order.type}-${order.id}`} className="flex items-center gap-3 p-3 rounded-lg border border-gray-100 hover:bg-gray-50">
+                    <span className="text-xs font-bold text-gray-400 w-6">{((modalPage - 1) * modalLimit) + idx + 1}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-gray-800 truncate">{order.name}</p>
+                      <p className="text-xs text-gray-500">{order.service_name || '-'}</p>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <p className="text-xs font-medium text-green-600">{formatDate(order.wedding_date)}</p>
+                      <div className="flex gap-1 justify-end mt-1">
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium capitalize ${order.status === 'confirmed' ? 'bg-indigo-100 text-indigo-700' : 'bg-yellow-100 text-yellow-700'
+                          }`}>
+                          {order.status || 'Pending'}
+                        </span>
+                      </div>
                     </div>
                   </div>
+                ))}
+              </div>
+              {modalTotalPages > 1 && (
+                <div className="mt-4 flex items-center justify-between border-t pt-4">
+                  <span className="text-xs text-gray-500">
+                    Halaman {modalPage} / {modalTotalPages} ({modalTotal} item)
+                  </span>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      disabled={modalPage <= 1}
+                      onClick={() => handleModalPageChange(modalPage - 1)}
+                      className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-semibold disabled:opacity-40"
+                    >
+                      Sebelumnya
+                    </button>
+                    <button
+                      type="button"
+                      disabled={modalPage >= modalTotalPages}
+                      onClick={() => handleModalPageChange(modalPage + 1)}
+                      className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-semibold disabled:opacity-40"
+                    >
+                      Berikutnya
+                    </button>
+                  </div>
                 </div>
-              ))}
-            </div>
+              )}
+            </>
           )}
         </StatModal>
       )}
@@ -338,21 +392,48 @@ const AdminDashboard = () => {
           ) : customClients.length === 0 ? (
             <p className="text-center text-gray-400 py-8">Tidak ada permintaan kustom aktif.</p>
           ) : (
-            <div className="space-y-2">
-              {customClients.map((req) => (
-                <div key={req.id} className="p-3 rounded-lg border border-amber-100 bg-amber-50 flex items-start gap-3">
-                  <span className="mt-0.5 text-amber-500">
-                    <Star size={16} />
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-gray-800">{req.name}</p>
-                    <p className="text-xs text-gray-500 truncate">{req.services || '-'}</p>
-                    <p className="text-xs text-gray-400 mt-0.5">{formatDate(req.wedding_date)}</p>
+            <>
+              <div className="space-y-2">
+                {customClients.map((req) => (
+                  <div key={req.id} className="p-3 rounded-lg border border-amber-100 bg-amber-50 flex items-start gap-3">
+                    <span className="mt-0.5 text-amber-500">
+                      <Star size={16} />
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-gray-800">{req.name}</p>
+                      <p className="text-xs text-gray-500 truncate">{req.services || '-'}</p>
+                      <p className="text-xs text-gray-400 mt-0.5">{formatDate(req.wedding_date)}</p>
+                    </div>
+                    <span className="text-xs px-2 py-0.5 rounded bg-amber-200 text-amber-800 font-medium flex-shrink-0">Custom</span>
                   </div>
-                  <span className="text-xs px-2 py-0.5 rounded bg-amber-200 text-amber-800 font-medium flex-shrink-0">Custom</span>
+                ))}
+              </div>
+              {modalTotalPages > 1 && (
+                <div className="mt-4 flex items-center justify-between border-t pt-4">
+                  <span className="text-xs text-gray-500">
+                    Halaman {modalPage} / {modalTotalPages} ({modalTotal} item)
+                  </span>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      disabled={modalPage <= 1}
+                      onClick={() => handleModalPageChange(modalPage - 1)}
+                      className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-semibold disabled:opacity-40"
+                    >
+                      Sebelumnya
+                    </button>
+                    <button
+                      type="button"
+                      disabled={modalPage >= modalTotalPages}
+                      onClick={() => handleModalPageChange(modalPage + 1)}
+                      className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-semibold disabled:opacity-40"
+                    >
+                      Berikutnya
+                    </button>
+                  </div>
                 </div>
-              ))}
-            </div>
+              )}
+            </>
           )}
         </StatModal>
       )}

@@ -6,8 +6,9 @@ import AdminLayout from "../../components/AdminLayout";
 import { formatRupiah, formatDate, formatDateTime, toLocalDate, toDateOnlyString } from "../../utils/formatters";
 import jsPDF from "jspdf";
 import { useSiteIdentity } from "../../hooks/useSiteIdentity";
+import { API_BASE as BASE_URL } from "../../utils/endpoints";
 
-const API_BASE = "https://api.kingcreativestudio.my.id/user-photo/api";
+const API_BASE = `${BASE_URL}/api`;
 const CLIENT_COLOR_POOL = [
   "bg-green-600 text-white",
   "bg-sky-600 text-white",
@@ -111,6 +112,7 @@ const AdminOrders = () => {
   const [orderFinance, setOrderFinance] = useState(null);
   const [loadingFinance, setLoadingFinance] = useState(false);
   const [finAccommodationCost, setFinAccommodationCost] = useState('');
+  const [finDiscount, setFinDiscount] = useState('');
   const [finProductionItems, setFinProductionItems] = useState([]);
   const [showAllProdItems, setShowAllProdItems] = useState(false);
 
@@ -511,6 +513,7 @@ const AdminOrders = () => {
         const fin = data.data[0];
         setOrderFinance(fin);
         setFinAccommodationCost(fin.accommodation_cost != null ? String(fin.accommodation_cost) : '');
+        setFinDiscount(fin.discount != null ? String(fin.discount) : '');
 
         const savedItems = Array.isArray(fin.production_items) ? fin.production_items : [];
         const merged = [];
@@ -544,6 +547,7 @@ const AdminOrders = () => {
           production_total: 0,
         });
         setFinAccommodationCost('');
+        setFinDiscount('');
 
         const initial = parsedItems.map(cItem => ({
           label: (cItem.name || cItem.item_name || "Item").trim(),
@@ -572,6 +576,7 @@ const AdminOrders = () => {
         order_id: selectedOrder.id,
         accommodation_applied: Number(finAccommodationCost) > 0,
         accommodation_cost: finAccommodationCost === '' ? null : Number(finAccommodationCost),
+        discount: finDiscount === '' ? null : Number(finDiscount),
         notes: orderFinance?.notes || '',
         production_items: updatedItems.map(item => ({
           label: item.label.trim(),
@@ -602,6 +607,7 @@ const AdminOrders = () => {
         order_id: selectedOrder.id,
         accommodation_applied: Number(finAccommodationCost) > 0,
         accommodation_cost: finAccommodationCost === '' ? null : Number(finAccommodationCost),
+        discount: finDiscount === '' ? null : Number(finDiscount),
         notes: orderFinance?.notes || '',
         production_items: finProductionItems.map(item => ({
           label: item.label.trim(),
@@ -2135,7 +2141,7 @@ const AdminOrders = () => {
                           </div>
 
 
-                          {/* Biaya Akomodasi Custom */}
+                           {/* Biaya Akomodasi Custom */}
                           <div className="flex items-center gap-2">
                             <span className="text-xs text-gray-600 flex-1">
                               Biaya Akomodasi Custom
@@ -2150,12 +2156,27 @@ const AdminOrders = () => {
                             />
                           </div>
 
+                          {/* Discount Custom */}
+                          <div className="flex items-center gap-2 mt-2">
+                            <span className="text-xs text-gray-600 flex-1">
+                              Discount / Potongan Harga
+                            </span>
+                            <input
+                              type="number"
+                              min={0}
+                              value={finDiscount}
+                              onChange={(e) => setFinDiscount(e.target.value)}
+                              className="w-28 border rounded-lg px-2 py-1 text-xs text-right focus:ring-1 focus:ring-primary-500"
+                              placeholder="Rp 0"
+                            />
+                          </div>
+
                           <button
                             type="button"
                             onClick={handleSaveFinanceDetails}
                             className="w-full mt-2 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-semibold transition-colors"
                           >
-                            Simpan Biaya &amp; Akomodasi
+                            Simpan Biaya, Akomodasi &amp; Diskon
                           </button>
                         </div>
                       )}
@@ -2195,10 +2216,28 @@ const AdminOrders = () => {
                     </div>
                     <div>
                       <span className="font-medium text-gray-700">
-                        Total:
+                        Total Harga:
+                      </span>
+                      <p className="text-lg font-semibold text-gray-800">
+                        {formatRupiah(recalculatedTotal)}
+                      </p>
+                    </div>
+                    {(finDiscount !== '' && Number(finDiscount) > 0) ? (
+                      <div>
+                        <span className="font-medium text-gray-700">
+                          Diskon:
+                        </span>
+                        <p className="text-lg font-semibold text-green-600">
+                          - {formatRupiah(Number(finDiscount))}
+                        </p>
+                      </div>
+                    ) : null}
+                    <div>
+                      <span className="font-medium text-gray-700">
+                        Total Akhir:
                       </span>
                       <p className="text-2xl font-bold text-primary-600">
-                        {formatRupiah(recalculatedTotal)}
+                        {formatRupiah(Math.max(0, recalculatedTotal - (Number(finDiscount) || 0)))}
                       </p>
                     </div>
                     <div>
@@ -2214,7 +2253,7 @@ const AdminOrders = () => {
                         Sisa Pembayaran:
                       </span>
                       <p className="text-lg font-semibold text-red-600">
-                        {formatRupiah(Math.max(0, recalculatedTotal - toNumber(selectedOrder.booking_amount || 0)))}
+                        {formatRupiah(Math.max(0, recalculatedTotal - (Number(finDiscount) || 0) - toNumber(selectedOrder.booking_amount || 0)))}
                       </p>
                     </div>
                   </div>

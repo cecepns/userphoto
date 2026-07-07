@@ -22,3 +22,4 @@ add_freelancer_rekening_and_rates.sql
 add_custom_links_to_order_progress.sql
 add_fg_vg_to_detail_acara.sql
 add_alamat_to_freelancers.sql
+add_discount_to_order_financials.sql

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { useSiteIdentity } from '../hooks/useSiteIdentity';
+import { API_BASE } from '../utils/endpoints';
 
 const PaymentInstructions = ({ totalAmount, bookingAmount, onComplete, onBack, onPaymentMethodChange }) => {
   const { contact: siteContact } = useSiteIdentity();
@@ -14,7 +15,7 @@ const PaymentInstructions = ({ totalAmount, bookingAmount, onComplete, onBack, o
 
   const fetchPaymentMethods = async () => {
     try {
-      const response = await fetch('https://api.kingcreativestudio.my.id/user-photo/api/payment-methods');
+      const response = await fetch(`${API_BASE}/api/payment-methods`);
       const data = await response.json();
       setPaymentMethods(data);
       if (data.length > 0) {

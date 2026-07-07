@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
+import { API_BASE } from '../utils/endpoints';
 
-const API_BASE_URL = 'https://api.kingcreativestudio.my.id/user-photo/api';
+const API_BASE_URL = `${API_BASE}/api`;
 const DEFAULT_APP_NAME = 'Chekusphoto';
 const DEFAULT_COMPANY_NAME = 'PT Chekusphoto';
 const DEFAULT_APP_INITIAL = 'C';

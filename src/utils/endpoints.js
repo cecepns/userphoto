@@ -1,4 +1,4 @@
-export const API_BASE = 'https://api.kingcreativestudio.my.id/user-photo';
+export const API_BASE = import.meta.env.VITE_API_BASE || 'https://api.kingcreativestudio.my.id/user-photo';
 
 export const API_ENDPOINTS = {
   AUTH: {

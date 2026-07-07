@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import AsyncSelect from 'react-select/async';
 import {
-  Plus, Trash2, Save, Settings, Edit, ChevronLeft, ChevronRight, X, Search, Landmark, Coins, Truck, DollarSign,
+  Plus, Trash2, Save, Settings, Edit, ChevronLeft, ChevronRight, X, Search, Landmark, Coins, Truck, DollarSign, Percent,
 } from 'lucide-react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, PieChart, Pie, Cell, Legend } from 'recharts';
 import toast from 'react-hot-toast';
@@ -20,6 +20,8 @@ const buildFinancialForm = (row = null) => ({
   package_name: row?.package_name || '',
   gross_amount: row?.gross_amount ?? 0,
   accommodation_applied: row?.accommodation_applied ?? false,
+  accommodation_cost: row?.accommodation_cost ?? null,
+  discount: row?.discount ?? null,
   notes: row?.notes || '',
   production_items: row?.production_items?.length
     ? row.production_items.map((i) => ({ label: i.label, amount: i.amount }))
@@ -210,6 +212,8 @@ const AdminFinance = () => {
     order_source: form.order_source,
     order_id: form.order_id,
     accommodation_applied: form.accommodation_applied,
+    accommodation_cost: form.accommodation_cost,
+    discount: form.discount,
     notes: form.notes,
     production_items: form.production_items
       .filter((i) => i.label?.trim())
@@ -335,7 +339,7 @@ const AdminFinance = () => {
         {summary && (() => {
           const periodText = period === 'monthly' ? `${MONTH_NAMES[month - 1]} ${year}` : `${year}`;
           return (
-            <div className="grid md:grid-cols-4 gap-4 mb-8">
+            <div className="grid md:grid-cols-5 gap-4 mb-8">
               <button
                 onClick={() => setActivePanel('masuk')}
                 type="button"
@@ -347,6 +351,19 @@ const AdminFinance = () => {
                 </div>
                 <p className="text-2xl font-bold mt-1">{formatRupiah(summary.grossIncome)}</p>
                 <p className="text-xs text-green-100/80 mt-2 group-hover:text-white transition-colors">Klik untuk cari &amp; rincian →</p>
+              </button>
+
+              <button
+                onClick={() => setActivePanel('discount')}
+                type="button"
+                className="bg-gradient-to-br from-red-500 to-rose-600 text-white rounded-xl shadow-lg p-5 hover:scale-[1.02] hover:shadow-xl transition-all duration-200 text-left group"
+              >
+                <div className="flex justify-between items-center">
+                  <p className="text-sm text-red-100 font-medium">Discount ({periodText})</p>
+                  <Percent size={20} className="text-white" />
+                </div>
+                <p className="text-2xl font-bold mt-1">{formatRupiah(summary.discountTotal || 0)}</p>
+                <p className="text-xs text-red-100/80 mt-2 group-hover:text-white transition-colors">Klik untuk rincian diskon →</p>
               </button>
 
               <button
@@ -420,6 +437,7 @@ const AdminFinance = () => {
                     <th className="px-4 py-3 text-left">Paket</th>
                     <th className="px-4 py-3 text-left">Catatan</th>
                     <th className="px-4 py-3 text-right">Masuk</th>
+                    <th className="px-4 py-3 text-right">Diskon</th>
                     <th className="px-4 py-3 text-right">Pengeluaran</th>
                     <th className="px-4 py-3 text-right">Bersih</th>
                   </tr>
@@ -427,9 +445,9 @@ const AdminFinance = () => {
 
                 <tbody>
                   {loading ? (
-                    <tr><td colSpan={6} className="p-8 text-center text-gray-500">Memuat...</td></tr>
+                    <tr><td colSpan={7} className="p-8 text-center text-gray-500">Memuat...</td></tr>
                   ) : orders.length === 0 ? (
-                    <tr><td colSpan={6} className="p-8 text-center text-gray-500">Belum ada data pesanan</td></tr>
+                    <tr><td colSpan={7} className="p-8 text-center text-gray-500">Belum ada data pesanan</td></tr>
 
                   ) : (
                     orders.map((row) => (
@@ -453,6 +471,9 @@ const AdminFinance = () => {
                           ) : null}
                         </td>
                         <td className="px-4 py-3 text-right">{formatRupiah(row.gross_amount)}</td>
+                        <td className="px-4 py-3 text-right text-red-600">
+                          {row.discount > 0 ? `-${formatRupiah(row.discount)}` : '-'}
+                        </td>
                         <td className="px-4 py-3 text-right">
                           {formatRupiah(row.production_total + row.accommodation_cost)}
                         </td>
@@ -566,6 +587,74 @@ const AdminFinance = () => {
                   {orders.length === 0 && <p className="text-center text-gray-500 py-4">Tidak ada data ditemukan</p>}
                 </div>
               </div>
+              {pagination.total > 0 && (
+                <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between gap-3 bg-gray-50 rounded-b-xl">
+                  <span className="text-xs text-gray-500">
+                    Halaman {pagination.page} / {pagination.totalPages} ({pagination.total} item)
+                  </span>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      disabled={pagination.page <= 1}
+                      onClick={() => setPagination((p) => ({ ...p, page: p.page - 1 }))}
+                      className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-semibold disabled:opacity-40"
+                    >
+                      Sebelumnya
+                    </button>
+                    <button
+                      type="button"
+                      disabled={pagination.page >= pagination.totalPages}
+                      onClick={() => setPagination((p) => ({ ...p, page: p.page + 1 }))}
+                      className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-semibold disabled:opacity-40"
+                    >
+                      Berikutnya
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Modal: Detail Discount */}
+        {activePanel === 'discount' && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 overflow-y-auto">
+            <div className="bg-white rounded-xl max-w-3xl w-full my-8 shadow-xl flex flex-col max-h-[85vh]">
+              <div className="flex items-center justify-between px-6 py-4 border-b">
+                <h3 className="text-lg font-semibold text-gray-800">Detail Diskon</h3>
+                <button type="button" onClick={() => setActivePanel(null)} className="p-1 rounded-lg text-gray-500 hover:bg-gray-100">
+                  <X size={20} />
+                </button>
+              </div>
+              <div className="p-6 overflow-y-auto flex-1">
+                <div className="mb-4 relative">
+                  <input
+                    type="search"
+                    placeholder="Cari client / paket..."
+                    value={search}
+                    onChange={(e) => {
+                      setSearch(e.target.value);
+                      setPagination((p) => ({ ...p, page: 1 }));
+                    }}
+                    className="border rounded-lg pl-10 pr-4 py-2 w-full text-sm"
+                  />
+                  <Search size={18} className="absolute left-3 top-3 text-gray-400" />
+                </div>
+                <div className="space-y-3">
+                  {orders.filter(row => Number(row.discount || 0) > 0).map((row) => (
+                    <div key={`${row.order_source}-${row.order_id}`} className="flex justify-between items-center p-3 border rounded-lg hover:bg-gray-50 text-sm">
+                      <div>
+                        <p className="font-semibold text-gray-800">{row.client_name}</p>
+                        <p className="text-xs text-gray-500">{row.package_name || '-'}</p>
+                      </div>
+                      <p className="font-bold text-red-600">-{formatRupiah(row.discount)}</p>
+                    </div>
+                  ))}
+                  {orders.filter(row => Number(row.discount || 0) > 0).length === 0 && (
+                    <p className="text-center text-gray-500 py-4 text-sm">Tidak ada data diskon ditemukan</p>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -615,6 +704,31 @@ const AdminFinance = () => {
                   ))}
                 </div>
               </div>
+              {pagination.total > 0 && (
+                <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between gap-3 bg-gray-50 rounded-b-xl">
+                  <span className="text-xs text-gray-500">
+                    Halaman {pagination.page} / {pagination.totalPages} ({pagination.total} item)
+                  </span>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      disabled={pagination.page <= 1}
+                      onClick={() => setPagination((p) => ({ ...p, page: p.page - 1 }))}
+                      className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-semibold disabled:opacity-40"
+                    >
+                      Sebelumnya
+                    </button>
+                    <button
+                      type="button"
+                      disabled={pagination.page >= pagination.totalPages}
+                      onClick={() => setPagination((p) => ({ ...p, page: p.page + 1 }))}
+                      className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-semibold disabled:opacity-40"
+                    >
+                      Berikutnya
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -651,6 +765,31 @@ const AdminFinance = () => {
                   )}
                 </div>
               </div>
+              {pagination.total > 0 && (
+                <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between gap-3 bg-gray-50 rounded-b-xl">
+                  <span className="text-xs text-gray-500">
+                    Halaman {pagination.page} / {pagination.totalPages} ({pagination.total} item)
+                  </span>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      disabled={pagination.page <= 1}
+                      onClick={() => setPagination((p) => ({ ...p, page: p.page - 1 }))}
+                      className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-semibold disabled:opacity-40"
+                    >
+                      Sebelumnya
+                    </button>
+                    <button
+                      type="button"
+                      disabled={pagination.page >= pagination.totalPages}
+                      onClick={() => setPagination((p) => ({ ...p, page: p.page + 1 }))}
+                      className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-semibold disabled:opacity-40"
+                    >
+                      Berikutnya
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -659,6 +798,7 @@ const AdminFinance = () => {
         {activePanel === 'bersih' && (() => {
           const totalIncome = summary?.grossIncome || 0;
           const pieData = totalIncome > 0 ? [
+            { name: 'Diskon', value: summary.discountTotal || 0, color: '#ef4444' }, // red-500
             { name: 'Biaya Produksi', value: summary.productionTotal, color: '#f97316' }, // orange-500
             { name: 'Akomodasi', value: summary.accommodationTotal, color: '#eab308' }, // yellow-500
             { name: 'Sisa Bersih', value: summary.netIncome > 0 ? summary.netIncome : 0, color: '#3b82f6' } // blue-500
@@ -693,7 +833,7 @@ const AdminFinance = () => {
                     </div>
 
                     <div className="bg-blue-50 rounded-lg p-3 text-xs text-blue-700 mt-2">
-                      <span className="font-semibold">Info:</span> Pendapatan bersih diperoleh dari total Uang Masuk dikurangi total Biaya Produksi dan biaya Akomodasi.
+                      <span className="font-semibold">Info:</span> Pendapatan bersih diperoleh dari total Uang Masuk dikurangi total Diskon, Biaya Produksi, dan biaya Akomodasi.
                     </div>
 
                     {pieData.length > 0 ? (
